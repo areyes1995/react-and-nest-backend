@@ -1,4 +1,4 @@
-# Uapaverse Frontend — desarrollo standalone con Docker (Vite con HMR).
+# Starter Frontend — desarrollo standalone con Docker (Vite con HMR).
 #
 # Uso (desde frontend/):
 #   docker compose up --build
@@ -10,20 +10,17 @@
 services:
   frontend:
     image: node:22-slim
-    container_name: uapaverse_frontend_dev
+    container_name: starter_frontend_dev
     working_dir: /app
     volumes:
       - .:/app
       - frontend_node_modules:/app/node_modules
-      # Ver nota en docker-compose.yml raíz: el motor vive en packages/.
-      - ../packages:/packages:ro
     ports:
       - '5173:5173'
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api/v1}
-      VITE_APP_NAME: ${VITE_APP_NAME:-Uapaverse}
+      VITE_APP_NAME: ${VITE_APP_NAME:-Starter}
       VITE_AUTH_METHOD: ${VITE_AUTH_METHOD:-db}
-      VITE_MOCK_ENABLED: ${VITE_MOCK_ENABLED:-false}
     command: >
       sh -c "
         corepack enable &&

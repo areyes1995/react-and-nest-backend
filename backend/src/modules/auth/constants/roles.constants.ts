@@ -2,21 +2,17 @@ import { PERMISSIONS } from './permissions.constants';
 import type { PermissionName } from './permissions.constants';
 
 // ──────────────────────────────────────────────
-// Roles UAPAverse (ver .docs/requerimientos-uapaverse,
-// dashboard_requerimientos_consolidados_uapaverse.txt
-// §1/§3 y todos_3d_stands.md RF-3D-46):
+// Roles base del starter:
 // SUPERADMIN (bypass total), ADMIN (acceso total),
-// EXHIBITOR (presentador: gestiona sus proyectos y
-// stands + sus métricas), BUSINESS (dashboard
-// empresarial de lectura) y GUEST (visitante o
-// académico: recorre ferias, visita stands).
+// USER (uso general: dashboard, notificaciones, RAG
+// y análisis IA de lectura) y GUEST (solo lectura
+// mínima).
 // ──────────────────────────────────────────────
 
 export const ROLES = {
   SUPERADMIN: 'SUPERADMIN',
   ADMIN: 'ADMIN',
-  EXHIBITOR: 'EXHIBITOR',
-  BUSINESS: 'BUSINESS',
+  USER: 'USER',
   GUEST: 'GUEST',
 } as const;
 
@@ -37,43 +33,31 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
   },
   {
     name: ROLES.ADMIN,
-    description:
-      'Acceso total. CRUD usuarios, roles, proyectos, stands, ferias, métricas globales',
+    description: 'Acceso total. CRUD usuarios, roles, IA y auditoría',
     permissions: PERMISSIONS.map((p) => p.name),
   },
   {
-    name: ROLES.EXHIBITOR,
-    description:
-      'Presentador. Gestiona sus proyectos y stands, sus métricas, solicitudes y mensajería',
+    name: ROLES.USER,
+    description: 'Uso general: dashboard, notificaciones, RAG e IA',
     permissions: [
       'rag:read',
       'rag:search',
       'notification:read',
       'notification:update',
       'ai-analysis:read',
+      'ai-analysis:create',
       'custom-module:read',
-      'module:records',
-    ],
-  },
-  {
-    name: ROLES.BUSINESS,
-    description: 'Dashboard empresarial de lectura. Métricas y documentos',
-    permissions: [
-      'rag:read',
-      'rag:search',
-      'notification:read',
-      'module:records',
+      'module:dashboard',
     ],
   },
   {
     name: ROLES.GUEST,
-    description:
-      'Visitante o académico. Recorre ferias, visita stands, gestiona intereses',
+    description: 'Solo lectura mínima',
     permissions: [
       'rag:read',
       'rag:search',
       'notification:read',
-      'module:records',
+      'module:dashboard',
     ],
   },
 ];

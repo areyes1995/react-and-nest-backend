@@ -44,7 +44,7 @@ export class AiAnalysisController {
   }
 
   @Get()
-  @Roles(ROLES.ADMIN, ROLES.EXHIBITOR, ROLES.BUSINESS, ROLES.GUEST)
+  @Roles(ROLES.ADMIN, ROLES.USER, ROLES.GUEST)
   @UseGuards(RolesGuard)
   @ApiResponse({
     status: 200,

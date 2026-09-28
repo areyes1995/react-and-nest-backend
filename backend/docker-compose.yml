@@ -1,4 +1,4 @@
-# Uapaverse Backend — entorno de desarrollo standalone con Docker.
+# Starter Backend — entorno de desarrollo standalone con Docker.
 # API con recarga en caliente + Postgres + Redis.
 # La API lee `.env` (env_file); DATABASE_URL/REDIS_* se ajustan aquí
 # a la red de Docker sin tocar tu `.env` local.
@@ -10,12 +10,12 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: uapaverse_postgres_dev
+    container_name: starter_postgres_dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      POSTGRES_DB: ${DATABASE_NAME:-uapaverse}
+      POSTGRES_DB: ${DATABASE_NAME:-starter}
     ports:
       - '${DATABASE_PORT:-5432}:5432'
     volumes:
@@ -28,7 +28,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: uapaverse_redis_dev
+    container_name: starter_redis_dev
     restart: unless-stopped
     command: redis-server --requirepass "${REDIS_PASSWORD:-redis_dev_password}"
     ports:
@@ -38,7 +38,7 @@ services:
 
   api:
     image: node:22-slim
-    container_name: uapaverse_api_dev
+    container_name: starter_api_dev
     working_dir: /app
     volumes:
       - .:/app
@@ -51,10 +51,10 @@ services:
       PORT: '3000'
       DATABASE_USER: ${DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      DATABASE_NAME: ${DATABASE_NAME:-uapaverse}
+      DATABASE_NAME: ${DATABASE_NAME:-starter}
       DATABASE_HOST: postgres
       DATABASE_PORT: '5432'
-      DATABASE_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-uapaverse}
+      DATABASE_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-starter}
       REDIS_HOST: redis
       REDIS_PORT: '6379'
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}

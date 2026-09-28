@@ -87,7 +87,7 @@ export class CreateAdminCommand extends BaseCommand {
 
   @Option({
     flags: '--role <role>',
-    description: 'User role (ADMIN, EXHIBITOR, BUSINESS or GUEST, default: ADMIN)',
+    description: 'User role (ADMIN, USER or GUEST, default: ADMIN)',
   })
   parseRole(val: string): string {
     return val.trim().toUpperCase();

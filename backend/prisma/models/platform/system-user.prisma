@@ -27,17 +27,7 @@ model SystemUser {
   createdAuthLogs AuthLog[]        @relation("AuthLogCreatedBy")
   roles           SystemUserRole[]
 
-  // Biblioteca personal: artículos, clases y videos guardados.
-  savedItems SavedItem[]
-
-  // Planes de pago comprados (historial completo).
-  subscriptions Subscription[]
-
-  // Publicación de contenido de la academia (quién tocó qué por última vez).
-  academyCourses        AcademyCourse[]        @relation("AcademyCourseUpdatedBy")
-  academyLessons        AcademyLesson[]        @relation("AcademyLessonUpdatedBy")
-
-  // Ajustes globales (estilo de mesa por defecto…).
+  // Ajustes globales.
   appSettings AppSetting[] @relation("AppSettingUpdatedBy")
 
   @@index([isActive])

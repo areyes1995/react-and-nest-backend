@@ -2,9 +2,9 @@ import { PERMISSIONS, RESOURCES } from 'src/modules/auth/constants/permissions.c
 import { ROLES, ROLE_DEFINITIONS } from 'src/modules/auth/constants/roles.constants';
 
 describe('RBAC constants', () => {
-  it('ROLES contiene los 5 roles esperados', () => {
+  it('ROLES contiene los 4 roles esperados', () => {
     expect(Object.values(ROLES)).toEqual(
-      expect.arrayContaining(['SUPERADMIN', 'ADMIN', 'EXHIBITOR', 'BUSINESS', 'GUEST']),
+      expect.arrayContaining(['SUPERADMIN', 'ADMIN', 'USER', 'GUEST']),
     );
   });
 
@@ -28,7 +28,7 @@ describe('RBAC constants', () => {
     }
   });
 
-  it('EXHIBITOR/BUSINESS/GUEST solo usan permisos existentes', () => {
+  it('USER/GUEST solo usan permisos existentes', () => {
     const valid = new Set<string>(PERMISSIONS.map((p) => p.name));
     for (const def of ROLE_DEFINITIONS) {
       for (const perm of def.permissions) {

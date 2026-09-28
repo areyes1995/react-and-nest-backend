@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   hasPermission,
   hasAnyRole,
-  canManageContent,
   isAdminUser,
   preValidateCredentials,
   getAuthMethodLabel,
@@ -24,16 +23,15 @@ describe('auth helpers', () => {
     const user = { roles: ['admin'], role: 'admin' }
     it('case-insensitive y une roles+role', () => {
       expect(hasAnyRole(user, 'ADMIN')).toBe(true)
-      expect(hasAnyRole({ role: 'Exhibitor', roles: [] }, 'exhibitor')).toBe(true)
+      expect(hasAnyRole({ role: 'User', roles: [] }, 'user')).toBe(true)
       expect(hasAnyRole(user, 'GUEST')).toBe(false)
       expect(hasAnyRole(null)).toBe(false)
     })
   })
 
-  describe('canManageContent / isAdminUser', () => {
-    it('EXHIBITOR gestiona contenido pero no es admin', () => {
-      const u = { role: 'EXHIBITOR', roles: ['EXHIBITOR'] }
-      expect(canManageContent(u)).toBe(true)
+  describe('isAdminUser', () => {
+    it('USER no es admin', () => {
+      const u = { role: 'USER', roles: ['USER'] }
       expect(isAdminUser(u)).toBe(false)
     })
     it('ADMIN y SUPERADMIN son admin', () => {

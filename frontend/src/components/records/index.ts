@@ -1,3 +1,2 @@
-export { default as RecordsTable } from './RecordsTable'
-export { default as RecordsSummary } from './RecordsSummary'
-export { default as RecordsView } from './RecordsView'
+export { default as RbacRolesView } from './RbacRolesView'
+export { default as RbacPermissionsView } from './RbacPermissionsView'

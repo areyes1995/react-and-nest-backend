@@ -13,12 +13,6 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { RagModule } from './modules/rag/rag.module';
 import { RbacModule } from './modules/rbac/rbac.module';
-import { PokerAiModule } from './modules/poker-ai/poker-ai.module';
-import { AcademyContentModule } from './modules/academy-content/academy-content.module';
-import { SavedItemModule } from './modules/saved-item/saved-item.module';
-import { TableThemeModule } from './modules/table-theme/table-theme.module';
-import { BillingModule } from './modules/billing/billing.module';
-import { QuizModule } from './modules/quiz/quiz.module';
 
 import { PrismaModule } from 'prisma/prisma.module';
 import { HealthController } from './health.controller';
@@ -59,41 +53,6 @@ const bullConfig = {
         SMTP_PASSWORD: Joi.string().allow('').optional(),
         MAIL_FROM: Joi.string().allow('').optional(),
         FRONTEND_URL: Joi.string().uri().allow('').optional(),
-
-        // ── IA de la mesa de poker (todo opcional) ──
-        // Con POKER_AI_ENABLED=false (o sin definir) la mesa juega con los
-        // bots del motor y ninguna de estas variables hace falta.
-        POKER_AI_ENABLED: Joi.string().allow('').optional(),
-        POKER_AI_PROVIDER: Joi.string()
-          .valid(
-            'llamacpp',
-            'ollama',
-            'lmstudio',
-            'openai',
-            'openrouter',
-            'groq',
-            'anthropic',
-            'custom',
-          )
-          .allow('')
-          .optional(),
-        POKER_AI_API_FLAVOR: Joi.string().valid('openai', 'anthropic').allow('').optional(),
-        POKER_AI_BASE_URL: Joi.string().allow('').optional(),
-        POKER_AI_API_KEY: Joi.string().allow('').optional(),
-        POKER_AI_MODEL: Joi.string().allow('').optional(),
-        POKER_AI_TEMPERATURE: Joi.number().min(0).max(2).allow('').optional(),
-        POKER_AI_MAX_TOKENS: Joi.number().min(16).allow('').optional(),
-        POKER_AI_TIMEOUT_MS: Joi.number().min(500).allow('').optional(),
-        POKER_AI_JSON_MODE: Joi.string().allow('').optional(),
-        POKER_AI_MAX_SEATS: Joi.number().min(0).max(9).allow('').optional(),
-        POKER_AI_FALLBACK_TO_BOTS: Joi.string().allow('').optional(),
-        POKER_AI_REQUESTS_PER_MINUTE: Joi.number().min(1).allow('').optional(),
-
-        // ── Pagos (todo opcional) ──
-        // Sin ninguna de las dos, los pagos van en modo simulado: el checkout
-        // activa la suscripción sin cobrar. Ver modules/billing/config.
-        PAYMENTS_LIVE: Joi.string().allow('').optional(),
-        PAYMENTS_PROVIDER: Joi.string().valid('stripe', 'paypal', 'google').allow('').optional(),
       }),
     }),
     BullModule.forRoot(bullConfig),
@@ -109,12 +68,6 @@ const bullConfig = {
     MailerModule,
     RagModule,
     RbacModule,
-    PokerAiModule,
-    AcademyContentModule,
-    SavedItemModule,
-    TableThemeModule,
-    BillingModule,
-    QuizModule,
   ],
   providers: [LoggerService],
   exports: [LoggerService],

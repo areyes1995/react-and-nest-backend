@@ -48,9 +48,6 @@ function serveLocalConfig() {
 
 const rootDir = dirname(fileURLToPath(import.meta.url))
 
-// El motor de poker vive en packages/poker-engine y se consume como fuente TS.
-// El alias evita depender de que pnpm haya enlazado el workspace.
-const pokerEngine = resolve(rootDir, '../packages/poker-engine/src')
 const srcDir = resolve(rootDir, 'src')
 
 // https://vite.dev/config/
@@ -58,7 +55,6 @@ export default defineConfig({
   plugins: [react(), serveLocalConfig()],
   resolve: {
     alias: {
-      '@poker/engine': pokerEngine,
       '@components': join(srcDir, 'components'),
       '@features': join(srcDir, 'features'),
       '@pages': join(srcDir, 'pages'),
@@ -77,7 +73,7 @@ export default defineConfig({
     port: 5173,
     fs: {
       // Permite servir el paquete del motor, que vive fuera de frontend/.
-      allow: [rootDir, resolve(rootDir, '../packages')],
+      allow: [rootDir],
     },
     strictPort: true,
     watch: {

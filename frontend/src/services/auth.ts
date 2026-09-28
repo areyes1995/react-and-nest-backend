@@ -1,10 +1,8 @@
 // ──────────────────────────────────────────────
-// Auth Service — Login / Logout / Refresh
-// Soporta: DB (base de datos) y LDAP
+// Auth Service — Login / Logout / Refresh (starter, DB)
 // ──────────────────────────────────────────────
 
-import { post, get, MOCK_ENABLED, type ApiResponse } from './api'
-import { mockLogin, mockLdapLogin, mockValidateToken } from '../mocks/auth'
+import { post, get, type ApiResponse } from './api'
 
 export interface User {
   id: string
@@ -31,7 +29,7 @@ export interface LoginCredentials {
   password: string
 }
 
-export type AuthMethod = 'db' | 'ldap'
+export type AuthMethod = 'db'
 
 // ─── Payload real del backend ────────────────
 
@@ -70,7 +68,7 @@ function mapRawUser(raw: RawUser): User {
   }
 }
 
-/** Verifica si el usuario posee un permiso RBAC exacto (ej. `module:coaching`). */
+/** Verifica si el usuario posee un permiso RBAC exacto. */
 export function hasPermission(
   user: Pick<User, 'permissions'> | null | undefined,
   permission: string,
@@ -90,17 +88,7 @@ export function hasAnyRole(
   return names.some(n => have.includes(String(n).toUpperCase()))
 }
 
-/**
- * Puede gestionar contenido (proyectos/stands): ADMIN, SUPERADMIN o EXHIBITOR.
- * Espejo frontend de los guards @Roles del backend (RF04/RF10, RF-3D-46).
- */
-export function canManageContent(
-  user: Pick<User, 'roles' | 'role'> | null | undefined,
-): boolean {
-  return hasAnyRole(user, 'ADMIN', 'SUPERADMIN', 'EXHIBITOR')
-}
-
-/** Verifica si el usuario tiene rol ADMIN o SUPERADMIN (gestión: ferias, usuarios, etc.). */
+/** Verifica si el usuario tiene rol ADMIN o SUPERADMIN. */
 export function isAdminUser(
   user: Pick<User, 'roles' | 'role'> | null | undefined,
 ): boolean {
@@ -110,42 +98,13 @@ export function isAdminUser(
   return roles.includes('ADMIN') || roles.includes('SUPERADMIN')
 }
 
-// ─── Leer método desde .env ──────────────────
-
-export const AUTH_METHOD: AuthMethod =
-  (import.meta.env.VITE_AUTH_METHOD as AuthMethod) || 'db'
-
-export const LDAP_CONFIG = {
-  host: import.meta.env.VITE_LDAP_HOST || 'ldap.example.com',
-  port: Number(import.meta.env.VITE_LDAP_PORT) || 389,
-  baseDn: import.meta.env.VITE_LDAP_BASE_DN || 'dc=uapaverse,dc=edu',
-  domain: import.meta.env.VITE_LDAP_DOMAIN || 'uapaverse.edu',
-  bindDn: import.meta.env.VITE_LDAP_BIND_DN || '',
-  bindPassword: import.meta.env.VITE_LDAP_BIND_PASSWORD || '',
-}
+export const AUTH_METHOD: AuthMethod = 'db'
 
 // ─── Login ───────────────────────────────────
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  if (MOCK_ENABLED) {
-    if (AUTH_METHOD === 'ldap') {
-      return mockLdapLogin(credentials)
-    }
-    return mockLogin(credentials)
-  }
+  const res = await post<RawAuthResponse>('/auth/login', credentials)
 
-  // ── Producción: decide endpoint según método ──
-  const endpoint = AUTH_METHOD === 'ldap' ? '/auth/ldap/login' : '/auth/login'
-
-  const res = await post<RawAuthResponse>(endpoint, {
-    ...credentials,
-    ...(AUTH_METHOD === 'ldap' && {
-      ldapHost: LDAP_CONFIG.host,
-      ldapPort: LDAP_CONFIG.port,
-      ldapBaseDn: LDAP_CONFIG.baseDn,
-    }),
-  })
-  
   if (!res.ok) {
     throw new Error(res.error || 'Error al iniciar sesión')
   }
@@ -159,27 +118,17 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 
 // ─── Validar token ───────────────────────────
 
-export async function validateToken(token: string): Promise<User> {
-  if (MOCK_ENABLED) {
-    return mockValidateToken(token)
-  }
-
+export async function validateToken(_token: string): Promise<User> {
   const res = await get<RawUser>('/auth/me')
   if (!res.ok) {
     throw new Error(res.error || 'Token inválido')
   }
-  console.log(res.data);
-
   return mapRawUser(res.data)
 }
 
 // ─── Logout ──────────────────────────────────
 
 export async function logout(): Promise<void> {
-  if (MOCK_ENABLED) {
-    return
-  }
-
   try {
     await post('/auth/logout')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -188,7 +137,7 @@ export async function logout(): Promise<void> {
   }
 }
 
-// ─── Reset password (token de "password-change") ──
+// ─── Reset password ──
 
 export async function resetPassword(
   token: string,
@@ -197,22 +146,20 @@ export async function resetPassword(
   return post<RawUser>('/auth/reset-password', { token, newPassword })
 }
 
-// ─── Verificar email (token de "email-verify") ──
+// ─── Verificar email ──
 
 export async function verifyEmail(token: string): Promise<ApiResponse<RawUser>> {
   return post<RawUser>('/auth/verify-email', { token })
 }
 
-// ─── Solicitar correo de reset de contraseña ──
+// ─── Solicitar correo de reset ──
 
 export async function requestPasswordReset(email: string): Promise<ApiResponse<void>> {
   return post<void>('/auth/request-password-reset', { email })
 }
 
-// ─── Obtener label del método actual ─────────
-
 export function getAuthMethodLabel(): string {
-  return AUTH_METHOD === 'ldap' ? 'LDAP / Active Directory' : 'Base de Datos'
+  return 'Base de Datos'
 }
 
 // ─── Validación previa del lado del cliente ───
@@ -222,32 +169,20 @@ export interface ValidationResult {
   error?: string
 }
 
-/**
- * Valida las credenciales ANTES de llamar al API/mock.
- * Corre 100% en cliente, sin depender del backend.
- */
 export function preValidateCredentials(credentials: LoginCredentials): ValidationResult {
   const { email, password } = credentials
-
-  // ─ Campo obligatorio ─
   if (!email?.trim()) {
     return { valid: false, error: 'El correo electrónico es requerido' }
   }
   if (!password?.trim()) {
     return { valid: false, error: 'La contraseña es requerida' }
   }
-
-  // ─ Formato de email ─
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email.trim())) {
     return { valid: false, error: 'El formato del correo no es válido' }
   }
-
-
-  // ─ Longitud mínima de contraseña ─
   if (password.length < 4) {
     return { valid: false, error: 'La contraseña debe tener al menos 4 caracteres' }
   }
-
   return { valid: true }
 }

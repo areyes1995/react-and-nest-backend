@@ -34,7 +34,6 @@
       "@records/*": ["src/records/*"],
       "@i18n": ["src/i18n"],
       "@i18n/*": ["src/i18n/*"],
-      "@poker/engine": ["../packages/poker-engine/src/index.ts"]
     },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
@@ -48,5 +47,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../packages/poker-engine/src"]
+  "include": ["src"]
 }

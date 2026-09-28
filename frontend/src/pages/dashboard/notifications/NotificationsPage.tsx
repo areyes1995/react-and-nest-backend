@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, BellRing, CheckCheck } from 'lucide-react'
 import { EmptyState, FilterSelect, SkeletonChartCard } from '@components/ui'
-import { RoleHeader, RoleSection } from '@components/role/RolePanels'
+import { ViewHeader } from '@components/ui'
 import {
   listNotifications,
   markAllNotificationsRead,
@@ -80,17 +80,12 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
-        <RoleHeader
+      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0 p-4 lg:p-6">
+        <ViewHeader
           title="Notificaciones"
           subtitle={unreadCount > 0 ? `${unreadCount} sin leer` : 'Estás al día'}
-          badge={unreadCount > 0 ? `${unreadCount} nuevas` : undefined}
         />
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <RoleSection
-            title="Actividad"
-            subtitle="Eventos relevantes de la plataforma"
-          >
+        <div className="flex-1 overflow-y-auto py-4">
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <FilterSelect
                 value={onlyUnread ? 'unread' : 'all'}
@@ -175,7 +170,7 @@ export default function NotificationsPage() {
                 </button>
               </div>
             )}
-          </RoleSection>
+          </div>
         </div>
       </div>
     </div>

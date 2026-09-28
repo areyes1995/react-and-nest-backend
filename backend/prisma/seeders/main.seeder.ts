@@ -6,8 +6,6 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { seedRoles } from './roles.seeder';
-import { seedQuizQuestions } from './quiz-questions.seeder';
-import { seedAcademyCurriculum } from './academy-curriculum.seeder';
 
 const databaseUrl = process.env.DATABASE_URL ?? '';
 const adapter = new PrismaPg({ connectionString: databaseUrl });
@@ -18,12 +16,6 @@ async function main() {
 
   // ── Seeders de roles RBAC ────────────────────────────────────────────
   await seedRoles(prisma);
-
-  // ── Currículo de la academia ─────────────────────────────────────────
-  await seedAcademyCurriculum(prisma);
-
-  // ── Banco de preguntas ───────────────────────────────────────────────
-  await seedQuizQuestions(prisma);
 
   console.log('\n✅  Todos los seeders ejecutados correctamente.');
 }

@@ -74,34 +74,24 @@ export const PERMISSIONS = [
     description: 'Ver auditoría',
   },
   {
-    name: 'module:records',
+    name: 'module:users',
     resource: 'module',
-    description: 'Ver módulo Records View (RAG)',
+    description: 'Ver módulo de usuarios',
   },
   {
-    name: 'module:coaching',
+    name: 'module:roles',
     resource: 'module',
-    description: 'Ver módulo Coaching Forms',
+    description: 'Ver módulo de roles y permisos',
   },
   {
-    name: 'module:vacations',
+    name: 'module:dashboard',
     resource: 'module',
-    description: 'Ver módulo Vacations',
-  },
-  {
-    name: 'module:sales',
-    resource: 'module',
-    description: 'Ver módulo Sales',
-  },
-  {
-    name: 'module:licenses',
-    resource: 'module',
-    description: 'Ver módulo Licenses',
+    description: 'Ver dashboard principal',
   },
   {
     name: 'module:permissions',
     resource: 'module',
-    description: 'Ver módulo Permissions',
+    description: 'Ver administración',
   },
   {
     name: 'custom-module:read',

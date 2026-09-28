@@ -11,11 +11,11 @@ import NotificationsBell from '@components/notifications/NotificationBell'
 
 export interface DashboardLayoutProps {
   sidebar: ReactNode
-  menuPanel: ReactNode
+  menuPanel?: ReactNode
   mainContent: ReactNode
   /** Barra superior de actividades. Ocupa el ancho del área principal. */
   appBar?: ReactNode
-  /** Franja de guía bajo la barra superior (el siguiente paso del estudiante). */
+  /** Franja opcional bajo la barra superior. */
   guideBar?: ReactNode
 }
 
@@ -54,15 +54,17 @@ export default function DashboardLayout({
         {sidebar}
       </div>
 
-      {/* ─── Menu panel: estático en lg+, drawer en móvil ─── */}
-      <div
-        data-tour="panel"
-        className={`fixed inset-y-0 left-0 z-40 h-full transform transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:transition-none ${
-          menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
-      >
-        {menuPanel}
-      </div>
+      {/* ─── Menu panel: solo si se provee (el starter no lo usa) ─── */}
+      {menuPanel && (
+        <div
+          data-tour="panel"
+          className={`fixed inset-y-0 left-0 z-40 h-full transform transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:transition-none ${
+            menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
+        >
+          {menuPanel}
+        </div>
+      )}
 
       {/* ─── Main ─── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">

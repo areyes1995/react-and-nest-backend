@@ -1,26 +1,26 @@
 {
-  "name": "uapaverse-monorepo",
+  "name": "starter-monorepo",
   "private": true,
   "version": "1.0.0",
-  "description": "Uapaverse monorepo — backend (NestJS) + frontend (Vite) con workspaces pnpm",
+  "description": "Starter monorepo \u2014 backend (NestJS) + frontend (Vite): auth, RBAC, IA, RAG, Redis",
   "packageManager": "pnpm@10.2.0",
   "workspaces": [
     "backend",
     "frontend"
   ],
   "scripts": {
-    "dev": "concurrently \"pnpm --filter uapaverse-backend run start:dev\" \"pnpm --filter @modu/frontend run dev -- --host 0.0.0.0 --port 5173\"",
-    "dev:backend": "pnpm --filter uapaverse-backend run start:dev",
-    "dev:frontend": "pnpm --filter @modu/frontend run dev -- --host 0.0.0.0 --port 5173",
+    "dev": "concurrently \"pnpm --filter starter-backend run start:dev\" \"pnpm --filter @starter/frontend run dev -- --host 0.0.0.0 --port 5173\"",
+    "dev:backend": "pnpm --filter starter-backend run start:dev",
+    "dev:frontend": "pnpm --filter @starter/frontend run dev -- --host 0.0.0.0 --port 5173",
     "build": "pnpm -r build",
-    "build:backend": "pnpm --filter uapaverse-backend run build",
-    "build:frontend": "pnpm --filter @modu/frontend run build",
+    "build:backend": "pnpm --filter starter-backend run build",
+    "build:frontend": "pnpm --filter @starter/frontend run build",
     "start": "pnpm --filter uapaverse-backend run start:prod",
     "start:prod": "pnpm --filter uapaverse-backend run start:prod",
     "test": "pnpm -r test",
-    "lint": "pnpm --filter uapaverse-backend run lint",
-    "db:migrate": "pnpm --filter uapaverse-backend run db:migrate",
-    "db:seed": "pnpm --filter uapaverse-backend run db:seed"
+    "lint": "pnpm --filter starter-backend run lint",
+    "db:migrate": "pnpm --filter starter-backend run db:migrate",
+    "db:seed": "pnpm --filter starter-backend run db:seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
