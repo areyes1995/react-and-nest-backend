@@ -1,0 +1,19 @@
+// ======================================================
+// AJUSTES GLOBALES — decisiones de un administrador que
+// afectan a todos los usuarios (p.ej. el estilo de mesa
+// por defecto). Clave-valor: cada ajuste nuevo es una
+// fila más, sin migración.
+// ======================================================
+
+model AppSetting {
+  /** Identificador del ajuste, p.ej. `poker.tableTheme`. */
+  key String @id @db.VarChar(120)
+
+  value Json
+
+  updatedById Int?
+  updatedBy   SystemUser? @relation("AppSettingUpdatedBy", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

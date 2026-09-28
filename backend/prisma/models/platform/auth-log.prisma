@@ -1,0 +1,19 @@
+model AuthLog {
+  id Int @id @default(autoincrement())
+
+  userId Int?
+  user   SystemUser? @relation("AuthLogCreatedBy", fields: [userId], references: [id])
+
+  email String?   @db.VarChar(150)
+  event AuthEvent
+
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([event])
+  @@index([createdAt])
+}

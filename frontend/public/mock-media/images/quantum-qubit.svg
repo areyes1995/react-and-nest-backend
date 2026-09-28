@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<rect width="1200" height="800" fill="#f4f0e8"/>
+
+<circle cx="600" cy="400" r="260" fill="#8f7bff" fill-opacity="0.08" stroke="#23201c" stroke-width="3"/>
+<ellipse cx="600" cy="400" rx="260" ry="80" fill="none" stroke="#23201c" stroke-opacity="0.4" stroke-width="2"/>
+<ellipse cx="600" cy="400" rx="80" ry="260" fill="none" stroke="#23201c" stroke-opacity="0.2" stroke-width="2"/>
+<line x1="600" y1="400" x2="760" y2="220" stroke="#8f7bff" stroke-width="8"/><circle cx="760" cy="220" r="16" fill="#8f7bff"/>
+<text x="585" y="120" font-family="Helvetica" font-size="32" fill="#23201c">|0⟩</text><text x="585" y="700" font-family="Helvetica" font-size="32" fill="#23201c">|1⟩</text>
+<g font-family="Helvetica, Arial, sans-serif" fill="#23201c">
+<rect x="48" y="722" width="36" height="4" fill="#23201c" opacity="0.8"/>
+<text x="48" y="756" font-size="22" font-weight="600" letter-spacing="3" opacity="0.75">ESFERA DE BLOCH</text>
+</g>
+</svg>

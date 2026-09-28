@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes App UI</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-[#121316] text-[#9A9CA5] font-sans antialiased h-screen overflow-hidden flex select-none">
+
+  <!-- ================= SIDEBAR IZQUIERDA (Navegación) ================= -->
+  <aside class="w-60 bg-[#16171B] border-r border-[#23252B] flex flex-col justify-between p-4 shrink-0">
+    <div class="space-y-6 overflow-y-auto pr-1">
+      
+      <!-- Seccion: Quick links -->
+      <div>
+        <h3 class="text-xs font-medium text-[#565963] mb-2 px-2">Quick links</h3>
+        <nav class="space-y-0.5 text-sm">
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-[#23252B] text-white font-medium">
+            <i data-lucide="sticky-note" class="w-4 h-4 text-blue-400"></i> All notes
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="bell" class="w-4 h-4"></i> Reminders
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="check-square" class="w-4 h-4"></i> Tasks
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="heart" class="w-4 h-4"></i> Favorites
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="bookmark" class="w-4 h-4 text-amber-500"></i> Highlights
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="activity" class="w-4 h-4"></i> Activity
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="search" class="w-4 h-4"></i> Saved
+          </a>
+        </nav>
+      </div>
+
+      <!-- Seccion: Folders -->
+      <div>
+        <h3 class="text-xs font-medium text-[#565963] mb-2 px-2">Folders</h3>
+        <nav class="space-y-0.5 text-sm">
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="folder" class="w-4 h-4 text-amber-600"></i> Management
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="folder" class="w-4 h-4 text-blue-500"></i> Images
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="folder" class="w-4 h-4 text-indigo-400"></i> Science
+          </a>
+        </nav>
+      </div>
+
+      <!-- Seccion: Tags -->
+      <div>
+        <h3 class="text-xs font-medium text-[#565963] mb-2 px-2">Tags</h3>
+        <nav class="space-y-0.5 text-sm">
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="tag" class="w-4 h-4"></i> Design
+          </a>
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="tag" class="w-4 h-4"></i> Screenshots
+          </a>
+        </nav>
+      </div>
+
+      <!-- Seccion: Trash -->
+      <div>
+        <h3 class="text-xs font-medium text-[#565963] mb-2 px-2">Trash</h3>
+        <nav class="space-y-0.5 text-sm">
+          <a href="#" class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1F2026] hover:text-gray-200 transition">
+            <i data-lucide="tag" class="w-4 h-4"></i> Silver
+          </a>
+        </nav>
+      </div>
+
+    </div>
+
+    <!-- Perfil de usuario abajo -->
+    <div class="pt-4 border-t border-[#23252B] flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-9 h-9 rounded-full object-cover">
+          <span class="w-2.5 h-2.5 bg-emerald-500 border-2 border-[#16171B] rounded-full absolute bottom-0 right-0"></span>
+        </div>
+        <div class="text-xs">
+          <p class="font-semibold text-white">Thomas Williams</p>
+          <p class="text-[#565963]">Personal</p>
+        </div>
+      </div>
+      <button class="text-[#565963] hover:text-white transition">
+        <i data-lucide="repeat" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= LISTA DE NOTAS ================= -->
+  <section class="w-80 bg-[#1A1B20] border-r border-[#23252B] flex flex-col shrink-0">
+    <div class="p-4 flex items-center gap-2 border-b border-[#23252B] h-[57px]">
+      <div class="relative flex-1">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-[#565963]"></i>
+        <input type="text" placeholder="Search" class="w-full bg-[#23252B] text-sm text-white placeholder-[#565963] pl-9 pr-8 py-1.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-600">
+        <i data-lucide="sliders-horizontal" class="w-4 h-4 absolute right-3 top-2.5 text-[#565963] cursor-pointer"></i>
+      </div>
+      <button class="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition shrink-0">
+        <i data-lucide="plus" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="px-4 pt-4 pb-2">
+      <h2 class="text-xl font-bold text-white">All notes</h2>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-3 space-y-2 pb-4">
+      <div class="p-3 bg-[#23252B]/40 hover:bg-[#23252B] rounded-xl cursor-pointer transition border border-transparent">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 rounded-full bg-lime-400"></span>
+          <h4 class="text-sm font-semibold text-white">Shopping list</h4>
+        </div>
+        <p class="text-xs text-[#565963] pl-4 mb-2">17/05/2020 Avocado, water</p>
+        <div class="ml-4 inline-flex items-center gap-1.5 bg-[#2B2E36] px-2 py-0.5 rounded text-[11px] text-blue-400">
+          <i data-lucide="clock" class="w-3 h-3"></i> 20 FEB 19:00
+        </div>
+      </div>
+
+      <div class="p-3 bg-[#23252B] rounded-xl cursor-pointer border border-[#32353E]">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 rounded-full bg-orange-400"></span>
+          <h4 class="text-sm font-semibold text-white">Fusion energy</h4>
+        </div>
+        <p class="text-xs text-[#565963] pl-4">18/01/2020 Generating endless energy</p>
+      </div>
+
+      <div class="p-3 bg-[#23252B]/40 hover:bg-[#23252B] rounded-xl cursor-pointer transition">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+            <h4 class="text-sm font-semibold text-white">Design meeting #256</h4>
+          </div>
+          <div class="flex items-center gap-1.5 text-[#565963]">
+            <i data-lucide="pin" class="w-3.5 h-3.5"></i>
+            <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+        <p class="text-xs text-[#565963] pl-4">09/01/2020</p>
+      </div>
+
+      <div class="p-3 hover:bg-[#23252B]/60 rounded-xl cursor-pointer transition">
+        <h4 class="text-sm font-semibold text-gray-300">Activation code</h4>
+        <p class="text-xs text-[#565963] mt-0.5">18/11/2019 KFLS-SLF12-1233-BLMS</p>
+      </div>
+
+      <div class="p-3 hover:bg-[#23252B]/60 rounded-xl cursor-pointer transition">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+          <h4 class="text-sm font-semibold text-gray-300">Post-Workout Nutrition</h4>
+        </div>
+        <p class="text-xs text-[#565963] pl-4">18/11/2019 You put a lot of effort into</p>
+      </div>
+
+      <div class="p-3 hover:bg-[#23252B]/60 rounded-xl cursor-pointer transition">
+        <h4 class="text-sm font-semibold text-gray-300">Ancient meteorite</h4>
+        <p class="text-xs text-[#565963] mt-0.5">18/11/2019</p>
+      </div>
+
+      <div class="p-3 hover:bg-[#23252B]/60 rounded-xl cursor-pointer transition">
+        <h4 class="text-sm font-semibold text-gray-300 truncate">Scientists develop safer lead-based</h4>
+        <p class="text-xs text-[#565963] mt-0.5 truncate">18/11/2019 A team of National Science</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= DETALLE DE LA NOTA ================= -->
+  <main class="flex-1 bg-[#16171B] flex flex-col h-full overflow-hidden relative">
+    
+    <!-- Header Superior Nota (Abre la barra completa de borde a borde) -->
+    <header class="w-full px-8 py-3.5 flex items-center justify-between border-b border-[#23252B] shrink-0 bg-[#16171B] z-10 h-[57px]">
+      <div class="flex items-center gap-4 text-xs font-medium text-[#565963]">
+        <span class="flex items-center gap-1 cursor-pointer hover:text-white transition">
+          <i data-lucide="folder" class="w-3.5 h-3.5"></i> My notes
+        </span>
+        <span class="flex items-center gap-1 cursor-pointer hover:text-white transition">
+          <i data-lucide="tag" class="w-3.5 h-3.5"></i> Add tags
+        </span>
+      </div>
+      <div class="flex items-center gap-4 text-[#565963] ">
+        <button class="hover:text-white transition"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+        <button class="hover:text-white transition"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+        <button class="hover:text-white transition"><i data-lucide="bell" class="w-4 h-4"></i></button>
+        <button class="hover:text-white transition"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+      </div>
+    </header>
+
+    <!-- Contenedor con Scroll para la nota -->
+    <div class="flex-1 overflow-y-auto relative pr-16">
+      <!-- Contenido Principal -->
+      <div class="max-w-3xl mx-auto w-full px-8 py-10 space-y-6">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+          <h1 class="text-3xl font-bold text-white tracking-wide">Fusion energy</h1>
+        </div>
+
+        <p class="text-base text-[#9A9CA5] leading-relaxed">
+          Generating endless energy with zero emissions by just slamming hydrogen atoms together has been somewhat of a pipe dream for decades. Now, scientists may be getting a tiny step closer to feasible fusion power, thanks to a futuristic experiment and dozens of plasma guns.
+        </p>
+
+        <div class="relative my-8 flex justify-center items-center py-4">
+          <div class="relative w-72 h-72 rounded-full flex items-center justify-center bg-radial from-purple-900/40 via-black to-transparent shadow-2xl border border-purple-500/20">
+            <div class="w-64 h-64 rounded-full border border-purple-500/30 flex items-center justify-center relative overflow-hidden bg-black/60">
+              <div class="w-10 h-10 bg-pink-500 rounded-full blur-md absolute"></div>
+              <div class="w-4 h-4 bg-white rounded-full absolute"></div>
+              <svg class="absolute inset-0 w-full h-full stroke-pink-500 opacity-70" viewBox="0 0 100 100">
+                <path d="M50 50 Q 30 20 10 30" fill="none" stroke-width="0.5"/>
+                <path d="M50 50 Q 70 20 85 25" fill="none" stroke-width="0.5"/>
+                <path d="M50 50 Q 80 50 90 65" fill="none" stroke-width="0.5"/>
+                <path d="M50 50 Q 30 80 15 70" fill="none" stroke-width="0.5"/>
+                <path d="M50 50 Q 50 90 55 95" fill="none" stroke-width="0.5"/>
+              </svg>
+            </div>
+
+            <div class="absolute -left-12 top-12 flex items-center gap-2">
+              <span class="text-xs text-gray-400 border-b border-gray-600 pb-0.5">Experiments</span>
+              <div class="w-8 h-px bg-gray-600 transform rotate-12"></div>
+            </div>
+
+            <div class="absolute -left-16 bottom-16 flex items-center gap-2">
+              <span class="text-xs text-gray-400 border-b border-gray-600 pb-0.5">Principles</span>
+              <div class="w-8 h-px bg-gray-600"></div>
+            </div>
+
+            <div class="absolute -right-16 top-8 flex items-center gap-2">
+              <div class="w-8 h-px bg-gray-600 transform -rotate-12"></div>
+              <span class="text-xs text-gray-400 border-b border-gray-600 pb-0.5">Development</span>
+            </div>
+
+            <div class="absolute -right-12 bottom-12 flex items-center gap-2">
+              <div class="w-8 h-px bg-gray-600 transform rotate-12"></div>
+              <span class="text-xs text-gray-400 border-b border-gray-600 pb-0.5">Power</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-base text-[#9A9CA5] leading-relaxed">
+          Eighteen of 36 plasma guns are in place on the machine that could make fusion power a reality. Those guns are the key components of Los Alamos National Laboratory's Plasma Liner Experiment (PLX), which uses a new approach to the problem.
+        </p>
+
+        <div class="mt-8 bg-[#1A1B20] border border-[#23252B] rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2 text-xs font-semibold text-white">
+              <i data-lucide="hard-drive" class="w-4 h-4 text-emerald-400"></i> Google drive
+            </div>
+            <i data-lucide="more-vertical" class="w-4 h-4 text-[#565963] cursor-pointer"></i>
+          </div>
+          
+          <div class="flex items-center gap-3 overflow-x-auto pb-1 text-xs">
+            <div class="flex items-center gap-2 bg-[#23252B] px-3 py-2 rounded-lg shrink-0 text-gray-300">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
+              <span>Spreadsheet t...</span>
+            </div>
+            <div class="flex items-center gap-2 bg-[#23252B] px-3 py-2 rounded-lg shrink-0 text-gray-300">
+              <i data-lucide="file-text" class="w-4 h-4 text-blue-500"></i>
+              <span>Documents</span>
+            </div>
+            <div class="flex items-center gap-2 bg-[#23252B] px-3 py-2 rounded-lg shrink-0 text-gray-300">
+              <i data-lucide="presentation" class="w-4 h-4 text-amber-500"></i>
+              <span>Slide deck d 2...</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= ELEMENTOS FLOTANTES DERECHOS ================= -->
+    
+    <!-- Botón Templates arriba -->
+    <!-- <div class="absolute right-5 top-16 z-20">
+      <button class="bg-[#212328] hover:bg-[#2B2E36] text-sm font-normal text-gray-300 px-4 py-2 rounded-xl flex items-center gap-2.5 border border-[#2C2E36] shadow-lg transition">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        Templates
+      </button>
+    </div> -->
+
+    <!-- Panel Vertical de Herramientas -->
+    <div class="absolute right-5 top-36 z-20 flex flex-col gap-6 bg-[#18191E] px-3.5 py-6 rounded-2xl border border-[#23252B] text-[#565963] shadow-xl">
+      <button class="hover:text-white transition flex items-center justify-center">
+        <i data-lucide="pin" class="w-5 h-5"></i>
+      </button>
+      <button class="hover:text-white transition flex items-center justify-center">
+        <i data-lucide="tag" class="w-5 h-5"></i>
+      </button>
+      <button class="hover:text-white transition flex items-center justify-center">
+        <i data-lucide="disc" class="w-5 h-5"></i>
+      </button>
+      <button class="hover:text-white transition flex items-center justify-center">
+        <i data-lucide="maximize-2" class="w-5 h-5"></i>
+      </button>
+      <button class="hover:text-white transition flex items-center justify-center">
+        <i data-lucide="grid" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Botón Flotante Inferior "Tag cloud" -->
+    <div class="absolute right-4 bottom-4 z-20 flex flex-col items-center text-xs text-[#565963] gap-1.5 cursor-pointer group">
+      <div class="w-11 h-11 rounded-2xl bg-[#212328] group-hover:text-white flex items-center justify-center border border-[#2C2E36] shadow-lg transition">
+        <i data-lucide="sparkles" class="w-5 h-5 text-gray-400 group-hover:text-white"></i>
+      </div>
+      <span class="text-[11px]">Tag cloud</span>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

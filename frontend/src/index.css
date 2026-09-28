@@ -1,0 +1,1410 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Design tokens (Dark default) ── */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-app: #121316;
+  --bg-main: #16171B;
+  --bg-panel: #1A1B20;
+  --bg-surface: #23252B;
+  --bg-surface-soft: rgba(35, 37, 43, 0.4);
+  --bg-surface-hover: rgba(35, 37, 43, 0.6);
+  --bg-hover: #1F2026;
+  --border: #23252B;
+  --border-active: #32353E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9A9CA5;
+  --text-muted: #565963;
+  --hover-overlay: rgba(255, 255, 255, 0.03);
+  --active-overlay: rgba(255, 255, 255, 0.06);
+  --bg-main-80: rgba(22, 23, 27, 0.8);
+  --bg-panel-80: rgba(26, 27, 32, 0.8);
+  --border-50: rgba(35, 37, 43, 0.5);
+  --text-muted-60: rgba(86, 89, 99, 0.6);
+  --text-primary-80: rgba(255, 255, 255, 0.8);
+  --scrollbar-track: #16171B;
+  --scrollbar-thumb: #3A3D47;
+  --scrollbar-thumb-hover: #4A4E5A;
+
+  /* ── Poker: mesa, cartas y fichas ── */
+  --poker-felt: #14532d;
+  --poker-felt-edge: #052e16;
+  --poker-rail: #3f2a1a;
+  --poker-rail-edge: #23150c;
+  --poker-gold: #f2a93b;
+  --poker-card-bg: #fdfcf8;
+  --poker-suit-red: #cc2936;
+  --poker-suit-black: #1b1b1f;
+  --poker-chip-text: #ffffff;
+
+  /* ── Niveles de la ruta de aprendizaje ── */
+  --level-beginner: #34d399;
+  --level-intermediate: #38bdf8;
+  --level-advanced: #a78bfa;
+  --level-theory: #8b5cf6;
+  --level-exploit: #f59e0b;
+  --level-pro: #f2a93b;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-app: #F3F4F6;
+  --bg-main: #FFFFFF;
+  --bg-panel: #F9FAFB;
+  --bg-surface: #E5E7EB;
+  --bg-surface-soft: rgba(229, 231, 235, 0.5);
+  --bg-surface-hover: rgba(229, 231, 235, 0.7);
+  --bg-hover: #E5E7EB;
+  --border: #E5E7EB;
+  --border-active: #D1D5DB;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6B7280;
+  --hover-overlay: rgba(0, 0, 0, 0.04);
+  --active-overlay: rgba(0, 0, 0, 0.06);
+  --bg-main-80: rgba(255, 255, 255, 0.8);
+  --bg-panel-80: rgba(249, 250, 251, 0.8);
+  --border-50: rgba(229, 231, 235, 0.5);
+  --text-muted-60: rgba(107, 114, 128, 0.6);
+  --text-primary-80: rgba(17, 24, 39, 0.8);
+  --scrollbar-track: #F3F4F6;
+  --scrollbar-thumb: #C7CBD4;
+  --scrollbar-thumb-hover: #AEB4BF;
+
+  /* ── Poker: mesa, cartas y fichas ── */
+  --poker-felt: #15803d;
+  --poker-felt-edge: #14532d;
+  --poker-rail: #6b4423;
+  --poker-rail-edge: #3f2a1a;
+  --poker-gold: #b7791f;
+  --poker-card-bg: #ffffff;
+  --poker-suit-red: #c02434;
+  --poker-suit-black: #111827;
+  --poker-chip-text: #ffffff;
+
+  /* ── Niveles de la ruta de aprendizaje ── */
+  --level-beginner: #059669;
+  --level-intermediate: #0284c7;
+  --level-advanced: #7c3aed;
+  --level-theory: #6d28d9;
+  --level-exploit: #d97706;
+  --level-pro: #b7791f;
+}
+
+/* ── Tipografía pequeña (text-nano/micro/mini/caption en Tailwind) ──
+   En pantallas táctiles y móviles sube un escalón para no bajar de
+   ~11px en etiquetas, badges y metadatos. */
+:root {
+  --fs-nano: 0.5rem;       /*  8px */
+  --fs-micro: 0.5625rem;   /*  9px */
+  --fs-mini: 0.625rem;     /* 10px */
+  --fs-caption: 0.6875rem; /* 11px */
+}
+@media (max-width: 640px), (pointer: coarse) {
+  :root {
+    --fs-nano: 0.5625rem;  /*  9px */
+    --fs-micro: 0.625rem;  /* 10px */
+    --fs-mini: 0.6875rem;  /* 11px */
+    --fs-caption: 0.75rem; /* 12px */
+  }
+}
+
+/* ── Escalado fluido del tamaño raíz según el monitor ──
+   Todo el UI usa rem, así que escalar el tamaño raíz agranda texto,
+   espaciados, iconos y contenedores de forma proporcional.
+   Se toma el menor de dos términos para que el ancho y el alto crezcan juntos:
+     · ancho: 16px en 1920px, crece 0.4px por cada 100px más.
+     · alto:  16px con ~950px de viewport (monitor 1080p con navegador),
+              ~18.5px con ~1300px (monitor 1440p).
+   Resultado aproximado (viewport CSS, con la barra del navegador):
+     Móvil, tablet, laptop 1366–1728, monitor 1080p …… 16px (diseño base)
+     2K 2560×1440 · 4K al 150% · ultrawide 3440×1440 … ~18.5px
+     4K al 100% (3840×2160) ………………………………………… 22px (tope)
+   El término de alto evita que un ultrawide (21:9, 32:9) escale de más. */
+html {
+  scroll-behavior: smooth;
+  font-size: clamp(1rem, min(0.52rem + 0.4vw, 0.576rem + 0.714vh), 1.375rem);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS Safari hace zoom al enfocar un campo con texto < 16px: se evita
+   usando 16px en campos de formulario en dispositivos táctiles. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: max(1rem, 16px) !important;
+  }
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-app);
+  color: var(--text-secondary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Themed scrollbar ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #f2a93b, #d18e2a);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/* ── Smooth scrolling containers ── */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* ── Hide scrollbar (used in small overflow rows) ── */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Focus ring ── */
+*:focus-visible {
+  outline: none;
+  ring: 2px solid rgba(242, 169, 59, 0.5);
+}
+
+/* ── Selection ── */
+::selection {
+  background: rgba(242, 169, 59, 0.3);
+  color: #fff;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+.animate-slide-up {
+  animation: slideUp 0.35s ease-out;
+}
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
+}
+
+/* ── Mesa de poker: avisos de acción y resultado ──
+   La mesa cambia rápido y en silencio; estas animaciones son la única pista
+   de que algo pasó cuando el estudiante está mirando sus propias cartas. */
+@keyframes tableEventIn {
+  from { opacity: 0; transform: translateX(14px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes tableEventOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(14px); }
+}
+@keyframes chipPop {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.7); }
+  60%  { opacity: 1; transform: translateY(-2px) scale(1.06); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes winnerGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 169, 59, 0.55); }
+  50%      { box-shadow: 0 0 0 10px rgba(242, 169, 59, 0); }
+}
+@keyframes resultIn {
+  0%   { opacity: 0; transform: scale(0.82); }
+  55%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes actingPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 169, 59, 0.45); }
+  50%      { box-shadow: 0 0 0 7px rgba(242, 169, 59, 0); }
+}
+
+.animate-table-event  { animation: tableEventIn 0.28s ease-out; }
+.animate-table-event-out { animation: tableEventOut 0.4s ease-in forwards; }
+.animate-chip-pop     { animation: chipPop 0.32s ease-out; }
+.animate-winner-glow  { animation: winnerGlow 1.4s ease-out infinite; }
+.animate-result-in    { animation: resultIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-acting-pulse { animation: actingPulse 1.6s ease-out infinite; }
+
+/* ── Apuestas sobre el tapete (BetChips) ──
+   Cada ficha es una elipse (vista en perspectiva) con el canto a rayas y la
+   cara interior lisa; la sombra inferior hace de grosor, así al apilarlas
+   se ve la columna. --chip-w escala con la mesa. */
+.bet-spot {
+  --chip-w: 1.25rem;
+  position: absolute;
+  z-index: 15;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+@media (min-width: 640px)  { .bet-spot { --chip-w: 1.5rem; } }
+@media (min-width: 1024px) { .bet-spot { --chip-w: 1.75rem; } }
+@media (min-width: 1280px) { .bet-spot { --chip-w: 1.95rem; } }
+
+.bet-pile {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--chip-w) * 0.08);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+.bet-column {
+  position: relative;
+  width: var(--chip-w);
+  height: calc(var(--chip-w) * 0.72 + (var(--chips) - 1) * var(--chip-w) * 0.15);
+}
+.bet-chip {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--chip-w) * 0.1 + var(--i) * var(--chip-w) * 0.15);
+  width: 100%;
+  height: calc(var(--chip-w) * 0.62);
+  border-radius: 50%;
+  background: repeating-conic-gradient(var(--chip) 0deg 34deg, var(--chip-stripe) 34deg 45deg);
+  box-shadow:
+    0 calc(var(--chip-w) * 0.1) 0 color-mix(in srgb, var(--chip) 55%, #000),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+}
+.bet-chip::after {
+  content: '';
+  position: absolute;
+  inset: 20% 17%;
+  border-radius: 50%;
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip-stripe) 65%, transparent);
+}
+.bet-amount {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (min-width: 1024px) { .bet-amount { font-size: 0.75rem; } }
+.bet-amount-right { left: 100%; margin-left: 0.3rem; }
+.bet-amount-left  { right: 100%; margin-right: 0.3rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-table-event,
+  .animate-table-event-out,
+  .animate-chip-pop,
+  .animate-winner-glow,
+  .animate-result-in,
+  .animate-acting-pulse {
+    animation: none;
+  }
+}
+
+@keyframes seaSlide {
+  from { background-position-x: 0; }
+  to   { background-position-x: 48px; }
+}
+@keyframes islandBob {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50%      { transform: translateY(-5px) rotate(5deg); }
+}
+/* Mapa de islas: olas, nubes, nodo actual y destellos */
+@keyframes oceanDrift {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 240px 60px, -180px 40px; }
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-10%); }
+  to   { transform: translateX(10%); }
+}
+@keyframes nodePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(242, 169, 59, 0.55), 0 6px 0 0 rgba(0, 0, 0, 0.35); }
+  70%  { box-shadow: 0 0 0 16px rgba(242, 169, 59, 0), 0 6px 0 0 rgba(0, 0, 0, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(242, 169, 59, 0), 0 6px 0 0 rgba(0, 0, 0, 0.35); }
+}
+@keyframes shoreWave {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.025); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+.animate-sea-slide { animation: seaSlide 2.6s linear infinite; }
+.animate-island-bob { animation: islandBob 2.4s ease-in-out infinite; }
+.animate-ocean-drift { animation: oceanDrift 28s linear infinite; }
+.animate-cloud-drift { animation: cloudDrift 14s ease-in-out infinite alternate; }
+.animate-node-pulse { animation: nodePulse 1.8s ease-out infinite; }
+.animate-shore-wave { animation: shoreWave 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.animate-twinkle { animation: twinkle 2.6s ease-in-out infinite; }
+
+/* Lectura en voz alta: ecualizador y bloque que suena */
+@keyframes speechBar {
+  0%, 100% { height: 4px; }
+  50%      { height: 16px; }
+}
+.animate-speech-bar { animation: speechBar 0.9s ease-in-out infinite; }
+/* Mientras se genera el audio: una franja que recorre la barra. */
+@keyframes readAloudWait {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.animate-read-aloud-wait { animation: readAloudWait 1.4s ease-in-out infinite; }
+.speech-active {
+  border-radius: 0.75rem;
+  outline: 2px solid color-mix(in srgb, var(--poker-gold) 55%, transparent);
+  outline-offset: 6px;
+  background: color-mix(in srgb, var(--poker-gold) 6%, transparent);
+  transition: outline-color 0.2s, background 0.2s;
+}
+/* Fila de la tabla que está explicando el audio: borde dorado que la marca. */
+.table-speech-row-active > td {
+  background: color-mix(in srgb, var(--poker-gold) 13%, transparent);
+  border-top: 1px solid var(--poker-gold);
+  border-bottom: 1px solid var(--poker-gold);
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.table-speech-row-active > td:first-child {
+  border-left: 2px solid var(--poker-gold);
+}
+.table-speech-row-active > td:last-child {
+  border-right: 2px solid var(--poker-gold);
+}
+
+/* Fila / columna de la que habla la mesa con audio del paso (verde, como la mesa). */
+.table-scene-row-active > td {
+  background: color-mix(in srgb, #10b981 14%, transparent);
+  border-top: 1px solid #10b981;
+  border-bottom: 1px solid #10b981;
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.table-scene-row-active > td:first-child {
+  border-left: 2px solid #10b981;
+}
+.table-scene-row-active > td:last-child {
+  border-right: 2px solid #10b981;
+}
+th.table-scene-col-active,
+td.table-scene-col-active {
+  background: color-mix(in srgb, #10b981 14%, transparent);
+  border-left: 1px solid #10b981;
+  border-right: 1px solid #10b981;
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Celebración al completar una clase */
+@keyframes confettiFall {
+  0%   { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(720deg); opacity: 0.9; }
+}
+@keyframes popIn {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+/* Cofre diario: brilla cuando está listo y tiembla al abrirse */
+@keyframes chestGlow {
+  0%, 100% { box-shadow: 0 5px 0 0 #b7791f, 0 0 0 0 rgba(242, 169, 59, 0.55); transform: translateY(0); }
+  50%      { box-shadow: 0 5px 0 0 #b7791f, 0 0 0 12px rgba(242, 169, 59, 0); transform: translateY(-3px); }
+}
+@keyframes chestShake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20%      { transform: rotate(-9deg) scale(1.06); }
+  40%      { transform: rotate(9deg) scale(1.1); }
+  60%      { transform: rotate(-7deg) scale(1.14); }
+  80%      { transform: rotate(7deg) scale(1.18); }
+}
+.animate-chest-glow { animation: chestGlow 1.6s ease-in-out infinite; }
+.animate-chest-shake { animation: chestShake 0.5s ease-in-out infinite; }
+
+.animate-confetti { animation: confettiFall var(--dur, 2.8s) cubic-bezier(0.25, 0.6, 0.5, 1) forwards; }
+.animate-pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sea-slide,
+  .animate-island-bob,
+  .animate-ocean-drift,
+  .animate-cloud-drift,
+  .animate-node-pulse,
+  .animate-shore-wave,
+  .animate-twinkle,
+  .animate-speech-bar,
+  .animate-read-aloud-wait,
+  .animate-confetti,
+  .animate-pop-in,
+  .animate-chest-glow,
+  .animate-chest-shake {
+    animation: none;
+  }
+  .animate-confetti { display: none; }
+}
+
+/* ── Loading spinner ── */
+.app-loading {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 0.9375rem;
+}
+.spinner-lg {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #f2a93b;
+  border-radius: 50%;
+  animation: app-spin 0.6s linear infinite;
+}
+@keyframes app-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Skeleton shimmer ── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #23252B 25%, #2C2E36 50%, #23252B 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ──────────────────────────────────────────────
+   Form system — single source of truth
+   Pages must NOT repeat these chains; use
+   FormField / FormInput / FormSelect /
+   FormTextarea / FormAlert / FormModalFooter.
+   ────────────────────────────────────────────── */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.form-field > label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 0.125rem;
+}
+.form-field-error {
+  font-size: var(--fs-caption);
+  line-height: 1.3;
+  color: #f87171;
+}
+:root[data-theme='light'] .form-field-error {
+  color: #dc2626;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-active);
+  border-radius: 0.625rem;
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+:root[data-theme='light'] .form-input {
+  box-shadow: inset 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+.form-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+.form-input:hover:not(:disabled) {
+  border-color: rgba(59, 130, 246, 0.45);
+  background-color: var(--bg-surface-hover);
+}
+.form-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.65);
+  background-color: var(--bg-surface-hover);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.form-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* ── Select: wrapper con icono (ver FormSelect) ── */
+.form-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.form-select-wrapper > select.form-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding-right: 2.5rem;
+  cursor: pointer;
+  background-image: none;
+}
+.form-select-wrapper > select.form-input:disabled {
+  cursor: not-allowed;
+}
+.form-select-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: var(--text-muted);
+}
+/* Lista desplegable nativa: fondo sólido del tema (no blanco/negro del SO) */
+select.form-input option,
+select.form-input optgroup {
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+}
+textarea.form-input {
+  resize: vertical;
+  min-height: 5.5rem;
+  line-height: 1.6;
+  padding: 0.625rem 0.875rem;
+}
+.form-input--error {
+  border-color: rgba(248, 113, 113, 0.6) !important;
+}
+.form-input--error:focus {
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+}
+
+.form-hint {
+  font-size: var(--fs-caption);
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-top: 0.375rem;
+}
+
+.form-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+.form-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.form-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.form-spinner {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: app-spin 0.6s linear infinite;
+}
+/* ══════════════════════════════════════════════
+   Movimiento — microinteracciones de la academia
+   Reglas: entrar con ease-out en 200-400 ms, salir
+   más rápido, escalonar grupos de 50-70 ms, y con
+   "reducir movimiento" quedarse en un simple fundido.
+   ══════════════════════════════════════════════ */
+
+/* Entrada escalonada: los hijos directos de .stagger suben uno tras otro. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stagger > * { animation: rise 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger > *:nth-child(8)  { animation-delay: 420ms; }
+.stagger > *:nth-child(n + 9) { animation-delay: 480ms; }
+
+/* Tarjetas que se levantan al pasar el ratón. */
+.hover-lift {
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease-out, border-color 0.18s;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.45);
+}
+
+/* Botones táctiles: se hunden al pulsar. */
+.press { transition: transform 0.1s ease-out, filter 0.15s; }
+.press:active:not(:disabled):not([aria-disabled='true']) { transform: translateY(2px) scale(0.98); }
+
+/* Test: acierto con rebote y brillo, fallo con sacudida. */
+@keyframes answerCorrect {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  40%  { transform: scale(1.03); }
+  100% { transform: scale(1); box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+}
+@keyframes answerWrong {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.animate-answer-correct { animation: answerCorrect 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-answer-wrong { animation: answerWrong 0.4s ease-in-out; }
+
+/* +XP que sube y se desvanece; insignia que da un saltito al cambiar. */
+@keyframes xpFloat {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.8); }
+  15%  { opacity: 1; transform: translateY(0) scale(1.08); }
+  30%  { transform: translateY(0) scale(1); }
+  80%  { opacity: 1; transform: translateY(-6px); }
+  100% { opacity: 0; transform: translateY(-22px); }
+}
+@keyframes bump {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.22); }
+}
+.animate-xp-float { animation: xpFloat 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.animate-bump { animation: bump 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* La llama de la racha, viva. */
+@keyframes flameFlicker {
+  0%, 100% { transform: scale(1) rotate(-2deg); filter: brightness(1); }
+  25% { transform: scale(1.08, 0.95) rotate(2deg); filter: brightness(1.15); }
+  50% { transform: scale(0.96, 1.06) rotate(-1deg); }
+  75% { transform: scale(1.05, 0.97) rotate(1deg); filter: brightness(1.1); }
+}
+.animate-flame { animation: flameFlicker 1.4s ease-in-out infinite; transform-origin: 50% 90%; }
+
+/* Reparto de cartas: la carta entra girando desde arriba. */
+@keyframes cardDeal {
+  from { opacity: 0; transform: translateY(-14px) rotateY(80deg) scale(0.85); }
+  to   { opacity: 1; transform: translateY(0) rotateY(0) scale(1); }
+}
+.animate-card-deal { animation: cardDeal 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > *,
+  .animate-card-deal {
+    animation: rise-fade 0.2s ease-out backwards;
+    animation-delay: 0ms !important;
+  }
+  .hover-lift:hover { transform: none; }
+  .press:active:not(:disabled) { transform: none; }
+  .animate-answer-correct,
+  .animate-answer-wrong,
+  .animate-bump,
+  .animate-flame { animation: none; }
+  .animate-xp-float { animation: fadeOnly 1.8s ease forwards; }
+}
+@keyframes rise-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOnly { 0% { opacity: 0; } 15%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ══════════════════════════════════════════════
+   Auth — login, recuperación y verificación.
+   Las cinco pantallas de acceso comparten lienzo,
+   tarjeta y escala de formulario. Viven aquí y no
+   en cada página para que respondan al tema claro
+   / oscuro igual que el resto de la academia.
+   ══════════════════════════════════════════════ */
+
+/* Lienzo: el fondo de la app con el resplandor dorado de la marca. */
+.auth-canvas {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1100px 620px at 82% -12%, color-mix(in srgb, var(--poker-gold) 12%, transparent), transparent 62%),
+    radial-gradient(900px 520px at 8% 108%, color-mix(in srgb, var(--level-advanced) 10%, transparent), transparent 60%),
+    var(--bg-app);
+}
+
+/* Tarjeta centrada: recuperar, restablecer y verificar. */
+.auth-card {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+}
+:root[data-theme='light'] .auth-card {
+  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.10);
+}
+
+/* Panel visual del login: el tapete detrás del formulario. */
+.auth-stage {
+  background:
+    radial-gradient(ellipse 95% 75% at 82% -6%, rgba(242, 169, 59, 0.20), transparent 62%),
+    radial-gradient(ellipse 72% 62% at 10% 94%, rgba(167, 139, 250, 0.18), transparent 60%),
+    radial-gradient(ellipse 48% 42% at 38% 44%, rgba(20, 83, 45, 0.10), transparent 70%),
+    linear-gradient(165deg, #22242C 0%, #1C1E24 38%, #16171B 62%, #0F1014 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.auth-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 22%, transparent 78%, rgba(0,0,0,0.18));
+}
+
+/* Panel del formulario del login: tema oscuro (ex lado claro). */
+.auth-form-panel {
+  position: relative;
+  background: var(--bg-panel);
+  color-scheme: dark;
+  --bg-app: #121316;
+  --bg-main: #16171B;
+  --bg-panel: #1A1B20;
+  --bg-surface: #23252B;
+  --bg-surface-soft: rgba(35, 37, 43, 0.4);
+  --bg-surface-hover: rgba(35, 37, 43, 0.6);
+  --bg-hover: #1F2026;
+  --border: #23252B;
+  --border-active: #32353E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9A9CA5;
+  --text-muted: #565963;
+  --hover-overlay: rgba(255, 255, 255, 0.03);
+  --active-overlay: rgba(255, 255, 255, 0.06);
+  --bg-main-80: rgba(22, 23, 27, 0.8);
+  --bg-panel-80: rgba(26, 27, 32, 0.8);
+  --border-50: rgba(35, 37, 43, 0.5);
+  --text-muted-60: rgba(86, 89, 99, 0.6);
+  --text-primary-80: rgba(255, 255, 255, 0.8);
+  --poker-gold: #f2a93b;
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.45), -4px 0 12px rgba(0, 0, 0, 0.28);
+  border-left: 1px solid var(--border);
+}
+.auth-form-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(242,169,59,0.22), transparent);
+  pointer-events: none;
+}
+
+/* Retícula de fondo, desvanecida hacia los bordes. */
+.auth-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 52px 52px;
+  opacity: 0.9;
+  -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 32%, #000 28%, transparent 78%);
+  mask-image: radial-gradient(ellipse 78% 68% at 50% 32%, #000 28%, transparent 78%);
+}
+
+/* Formulario a escala de portada: más aire que en los modales. */
+.auth-form .form-field > label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  opacity: 0.95;
+}
+.auth-form .form-input {
+  min-height: 2.875rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.875rem;
+  background-color: var(--bg-surface);
+  border: 1.5px solid var(--border-active);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.02);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.auth-form .form-input--with-left-icon {
+  padding-left: 2.625rem !important;
+}
+.auth-form .form-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.auth-form .form-input:hover:not(:disabled):not(:focus) {
+  border-color: #3A3E4A;
+  background-color: var(--bg-surface-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+/* Campo de contraseña: hueco para el icono y para el ojo. */
+.auth-form .form-input--password {
+  padding-left: 2.625rem;
+  padding-right: 2.75rem;
+}
+
+.auth-form .form-input:focus {
+  outline: none;
+  border-color: var(--poker-gold);
+  background-color: var(--bg-surface);
+  box-shadow: 0 0 0 4px rgba(242, 169, 59, 0.16), 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 12px rgba(242, 169, 59, 0.12);
+}
+.auth-form .form-input:focus-visible {
+  border-color: var(--poker-gold);
+}
+
+/* Llamada a la acción: el botón dorado de la academia. */
+.auth-form .form-submit-btn.auth-cta,
+.auth-cta {
+  width: 100%;
+  padding: 0.8125rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  border-radius: 0.875rem;
+  color: #1A1206;
+  background: linear-gradient(135deg, #F7C15A 0%, #F2A93B 18%, #E8960F 100%);
+  border: 1px solid rgba(242, 169, 59, 0.55);
+  box-shadow: 0 4px 14px rgba(242, 169, 59, 0.28), 0 1px 3px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.32);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.22);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease, background 0.18s ease;
+}
+.auth-cta:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F8C86A 0%, #F4B33E 18%, #EB9D1A 100%);
+  box-shadow: 0 8px 24px rgba(242, 169, 59, 0.36), 0 4px 10px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.38);
+  transform: translateY(-1.5px);
+  filter: brightness(1.02);
+}
+.auth-cta:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(242, 169, 59, 0.28), 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.auth-cta:disabled {
+  opacity: 0.62;
+}
+
+/* Botón secundario: mismo peso, sin el dorado. */
+.auth-ghost {
+  width: 100%;
+  padding: 0.8125rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.875rem;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-active);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.auth-ghost:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: #3A3E4A;
+  color: var(--text-primary);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+}
+
+/* Botones sociales del login — sombra y elevación sutil. */
+.auth-social-btn {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.22);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.auth-social-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38), 0 1px 3px rgba(0, 0, 0, 0.24);
+  transform: translateY(-1px);
+}
+.auth-social-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+/* Carrusel del panel visual. */
+.auth-rotator {
+  position: relative;
+  min-height: 2.6rem;
+}
+.auth-rotator .text-carousel-item {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.72);
+  letter-spacing: -0.01em;
+  pointer-events: none;
+}
+.auth-rotator .text-carousel-item--active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Tarjeta flotante del stage — vidrio oscuro premium. */
+.auth-stage .animate-auth-float {
+  box-shadow: 0 16px 36px rgba(0,0,0,0.42), 0 1px 0 rgba(255,255,255,0.07) inset, 0 0 0 1px rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(28,30,36,0.88), rgba(22,23,27,0.86));
+}
+
+/* Separador sutil del formulario claro. */
+.auth-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #E2E8F0 18%, #E2E8F0 82%, transparent);
+}
+
+/* ── Responsive: login full-background — sutil ajuste por viewport ── */
+@media (max-width: 640px) {
+  .auth-form .form-input {
+    min-height: 2.625rem;
+    padding: 0.6rem 0.875rem;
+    font-size: 0.8125rem;
+    border-radius: 0.75rem;
+  }
+  .auth-form .form-input--password {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  .auth-form .form-field > label {
+    font-size: 0.75rem;
+  }
+  .auth-cta {
+    padding: 0.68rem 1.25rem;
+    font-size: 0.875rem;
+    border-radius: 0.75rem;
+  }
+  .auth-rotator {
+    min-height: 2.2rem;
+  }
+  .auth-rotator .text-carousel-item {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+  .auth-grid {
+    background-size: 44px 44px;
+    opacity: 0.7;
+  }
+}
+@media (max-width: 380px) {
+  .auth-social-btn {
+    font-size: 0.75rem;
+  }
+}
+@media (max-height: 900px) {
+  .auth-stage header {
+    height: 48px !important;
+  }
+  .auth-form .form-input {
+    min-height: 2.5rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+  .auth-form {
+    gap: 0.65rem !important;
+  }
+  .auth-form.mt-5, .auth-form.mt-6 {
+    margin-top: 1rem !important;
+  }
+}
+@media (max-height: 780px) {
+  .auth-rotator {
+    min-height: 1.8rem;
+  }
+  .auth-rotator .text-carousel-item {
+    font-size: 0.8125rem;
+  }
+}
+@media (max-height: 720px) {
+  .auth-stage {
+    min-height: 100dvh;
+  }
+}
+@media (min-width: 1536px) {
+  .auth-stage {
+    background:
+      radial-gradient(ellipse 95% 75% at 82% -6%, rgba(242, 169, 59, 0.18), transparent 62%),
+      radial-gradient(ellipse 72% 62% at 10% 94%, rgba(167, 139, 250, 0.16), transparent 60%),
+      radial-gradient(ellipse 48% 42% at 38% 44%, rgba(20, 83, 45, 0.09), transparent 70%),
+      linear-gradient(165deg, #22242C 0%, #1C1E24 38%, #16171B 62%, #0F1014 100%);
+  }
+}
+
+/* Flotación suave de las tarjetas del panel visual. */
+@keyframes authFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.animate-auth-float { animation: authFloat 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-auth-float { animation: none; }
+  .auth-rotator .text-carousel-item { transition: opacity 0.2s ease; transform: none; }
+  .auth-cta:hover:not(:disabled) { transform: none; }
+}
+
+/* ══════════════════════════════════════════════
+   Landing — la portada pública.
+   Siempre oscura, tenga el usuario el tema que
+   tenga: es la cara comercial del producto y su
+   contraste está calculado sobre negro. Por eso
+   fija los tokens en vez de heredarlos.
+   ══════════════════════════════════════════════ */
+.landing-dark {
+  --bg-app: #08090b;
+  --bg-main: #0d0e11;
+  --bg-panel: #131419;
+  --bg-surface: #1c1e24;
+  --bg-surface-hover: rgba(28, 30, 36, 0.7);
+  --bg-panel-80: rgba(19, 20, 25, 0.8);
+  --border: #23252b;
+  --border-active: #32353e;
+  --text-primary: #ffffff;
+  --text-secondary: #b4b6be;
+  --text-muted: #6b6e78;
+  --text-primary-80: rgba(255, 255, 255, 0.8);
+  --poker-gold: #f2a93b;
+  --level-beginner: #34d399;
+  --level-intermediate: #38bdf8;
+  --level-advanced: #a78bfa;
+  --level-pro: #f2a93b;
+
+  /* La mesa de la portada no es verde: el tapete toma el violeta
+     profundo del telon y la barandilla un grafito neutro, para que
+     la seccion no pelee con el oro de la marca. La app conserva su
+     tapete verde; esto solo vive dentro de .landing-dark. */
+  --poker-felt: #2f2357;
+  --poker-felt-edge: #170f31;
+  --poker-rail: #2a2733;
+  --poker-rail-edge: #14131a;
+
+  background: var(--bg-app);
+  color: var(--text-secondary);
+}
+
+/* Telón del hero: el degradado que funde la imagen
+   con la página, como en las portadas de streaming. */
+.landing-curtain {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, color-mix(in srgb, var(--poker-gold) 16%, transparent), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(76, 46, 140, 0.42), transparent 65%),
+    radial-gradient(ellipse 70% 55% at 85% 20%, rgba(124, 58, 237, 0.24), transparent 65%),
+    var(--bg-app);
+}
+
+/* Viñeta: oscurece los bordes y hunde el pie del
+   hero en el color de fondo para que no haya costura. */
+.landing-vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 100% 70% at 50% 40%, transparent 30%, rgba(8, 9, 11, 0.75) 100%),
+    linear-gradient(180deg, transparent 55%, var(--bg-app) 97%);
+}
+
+/* Retícula tenue sobre el telón. */
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 80%);
+}
+
+/* Titular de portada: escala con el ancho sin
+   romperse en móvil ni desbordar en pantallas anchas. */
+.landing-display {
+  font-size: clamp(2.5rem, 6.5vw, 5rem);
+  font-weight: 800;
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+}
+
+/* Aro dorado del plan recomendado. */
+.landing-featured {
+  border-color: color-mix(in srgb, var(--poker-gold) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--poker-gold) 22%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+/* Revelado al entrar en pantalla. La clase is-visible
+   la añade el observador de LandingPage. */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.6s ease-out, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.landing-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Portada: movimiento ────────────────────────
+   Tres piezas animadas, todas apagadas cuando el
+   sistema pide menos movimiento.
+   ────────────────────────────────────────────── */
+
+/* El abanico se reparte al cargar: cada carta entra
+   girando desde el centro hasta su sitio. El angulo
+   y el desplazamiento finales los pone el componente
+   en --fan-rotate / --fan-x / --fan-y. */
+@keyframes heroDeal {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(90px) rotate(0deg) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform:
+      translateX(calc(-50% + var(--fan-x))) translateY(var(--fan-y))
+      rotate(var(--fan-rotate)) scale(1);
+  }
+}
+.hero-card {
+  transform:
+    translateX(calc(-50% + var(--fan-x))) translateY(var(--fan-y))
+    rotate(var(--fan-rotate));
+  animation: heroDeal 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Respiracion lenta del telon: el resplandor se
+   desplaza para que el hero no quede congelado. */
+@keyframes heroBreathe {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.75; }
+  50%      { transform: translate3d(2%, -1.5%, 0) scale(1.08); opacity: 1; }
+}
+.hero-breathe { animation: heroBreathe 14s ease-in-out infinite; }
+
+/* Brillo que cruza el titular cada pocos segundos. */
+@keyframes heroSheen {
+  0%, 62%, 100% { background-position: 200% center; }
+  86%           { background-position: -80% center; }
+}
+.hero-sheen {
+  background-size: 200% auto;
+  animation: heroSheen 7s ease-in-out infinite;
+}
+
+/* Columnas de opiniones: cada una recorre la mitad
+   de su contenido, que va duplicado, asi que el
+   salto al reiniciar es invisible. */
+@keyframes marqueeUp {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+@keyframes marqueeDown {
+  from { transform: translateY(-50%); }
+  to   { transform: translateY(0); }
+}
+.marquee-up   { animation: marqueeUp   var(--marquee-duration, 40s) linear infinite; }
+.marquee-down { animation: marqueeDown var(--marquee-duration, 40s) linear infinite; }
+
+/* Al pasar el raton se detiene: si algo llama la
+   atencion, hay que poder leerlo. */
+.marquee-stage:hover .marquee-up,
+.marquee-stage:hover .marquee-down {
+  animation-play-state: paused;
+}
+
+/* Difuminado arriba y abajo para que las tarjetas
+   aparezcan y desaparezcan en vez de cortarse. */
+.marquee-stage {
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card {
+    animation: none;
+    opacity: 1;
+  }
+  .hero-breathe,
+  .hero-sheen,
+  .marquee-up,
+  .marquee-down {
+    animation: none;
+  }
+}
+
+/* ── Mesa de póker que llena su contenedor (PokerTable `fit`) ──
+   La mesa ocupa todo el hueco disponible con la proporción acotada entre
+   3:4 (móvil en vertical) y 1.9:1 (monitor ancho): nunca se sale ni obliga
+   a hacer scroll para llegar a los controles. */
+.poker-fit {
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+.poker-fit-box {
+  width: min(100cqw, 100cqh * 1.9);
+  height: min(100cqh, 100cqw * 1.3333);
+}
+
+/* Fichas y su importe escalan con la mesa, no con la ventana. */
+.poker-fit-box .bet-spot {
+  --chip-w: calc(1.6rem * var(--table-scale, 1));
+}
+.poker-fit-box .bet-amount {
+  font-size: calc(0.75rem * min(var(--table-scale, 1), 1.15));
+}
+
+/* ── Mesa de práctica: escenario + panel (PlayPage) ──
+   .play-shell es el contenedor de referencia: sus medidas (cqw/cqh) deciden
+   si hay sitio para dos columnas y cuánto mide el escenario. */
+.play-shell {
+  container-type: size;
+}
+
+.play-grid {
+  height: 100%;
+  max-width: 100rem;
+  margin-inline: auto;
+  display: grid;
+  gap: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Una columna: el escenario mide exactamente el alto visible (con un mínimo
+   para pantallas muy bajas, donde se desliza) y el panel queda debajo. */
+.play-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100cqh;
+  min-height: 24rem;
+}
+
+.play-aside {
+  min-width: 0;
+}
+
+/* Las acciones quedan pegadas abajo aunque se deslice hacia el panel. */
+.play-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  flex-shrink: 0;
+  padding-block: 0.25rem;
+  background: var(--bg-main);
+}
+
+@container (min-width: 56rem) {
+  .play-grid {
+    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr) 18.75rem;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .play-stage {
+    height: auto;
+    min-height: 0;
+  }
+  .play-aside {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+    padding-bottom: 0.5rem;
+  }
+  .play-actions {
+    position: static;
+    background: transparent;
+  }
+}
+
+@container (min-width: 80rem) {
+  .play-grid {
+    grid-template-columns: minmax(0, 1fr) 20.625rem;
+  }
+}

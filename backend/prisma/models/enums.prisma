@@ -1,0 +1,267 @@
+// ======================================================
+// ENUMS — agrupados por dominio
+// ======================================================
+
+// ── Acceso y notificaciones ──────────────────────────
+
+enum AuthEvent {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+}
+
+enum NotificationType {
+  GENERIC
+  INFO
+  WARNING
+  ERROR
+}
+
+// ── Academia (currículo y publicación) ───────────────
+
+enum AcademyVideoProvider {
+  NONE
+  YOUTUBE
+  VIMEO
+  MP4
+}
+
+/** Formato principal de una clase, para filtrar y para el icono del listado. */
+enum AcademyLessonKind {
+  LESSON
+  VIDEO
+  DRILL
+  QUIZ
+}
+
+/** Tipos de bloque de una clase. */
+enum AcademyBlockType {
+  HEADING
+  PARAGRAPH
+  LIST
+  CALLOUT
+  TABLE
+  HANDS
+  SPOT
+  QUIZ
+  DRILL
+  SHOWCASE
+  RANGE
+}
+
+enum AcademyCalloutTone {
+  KEY
+  TIP
+  WARNING
+}
+
+// ── Guardados del estudiante ─────────────────────────
+
+enum SavedItemKind {
+  ARTICLE
+  VIDEO
+  LESSON
+  GLOSSARY
+}
+
+// ── Banco de preguntas ───────────────────────────
+
+enum QuizLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  PRO
+}
+
+/** Opción múltiple, verdadero/falso o una situación con cartas. */
+enum QuizQuestionFormat {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SPOT
+}
+
+/** De dónde sale la pregunta: el banco propio de la academia o la IA. */
+enum QuizQuestionSource {
+  LOCAL
+  AI
+}
+
+// ── IA ───────────────────────────────────────────────
+
+enum AiAnalysisType {
+  VALIDATION_REQUEST_ITEM
+  PENSUM_IMPORT
+  STUDENT_SUBJECT_IMPORT
+}
+
+enum AiRecommendation {
+  APPROVE
+  REJECT
+  REVIEW_MANUAL
+}
+
+enum AiAnalysisStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ── Catálogos HR ─────────────────────────────────────
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  LICENSE
+  INACTIVE
+  TERMINATED
+  PENDING
+}
+
+enum ReconciliationStatus {
+  PENDING
+  MATCHED
+  UNMATCHED
+  ORPHAN
+  DUPLICATE
+}
+
+enum AssignmentType {
+  COACH
+  MANAGER
+  OTHER
+}
+
+// ── Turnover / Exits ─────────────────────────────────
+
+enum ExitReasonCategory {
+  CONTROLLABLE
+  NON_CONTROLLABLE
+}
+
+enum ExitType {
+  RESIGNATION
+  TERMINATION
+  REDUCTION
+  RETIREMENT
+  OTHER
+}
+
+enum SeparationOwnership {
+  VOICE_TEAM
+  CLIENT
+  HR
+  OTHER
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  NO_SHOW
+  ABANDONED
+  WAIVED
+}
+
+enum ActionItemStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum QualityCheckStatus {
+  OPEN
+  RESOLVED
+}
+
+// ── Conexiones (APIs / bases de datos externas) ──────
+
+enum ConnectionType {
+  API
+  DATABASE
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+enum ApiAuthType {
+  NONE
+  BEARER
+  BASIC
+  API_KEY
+  OAUTH2
+}
+
+enum DatabaseType {
+  POSTGRESQL
+  MYSQL
+  MARIADB
+  SQLSERVER
+  ORACLE
+  OTHER
+}
+
+// ── Sync / Ingestion ─────────────────────────────────
+
+enum SyncSource {
+  ODOO
+  GENESYS
+  KIMAI
+  INTRANET
+  OTHER
+}
+
+enum SyncType {
+  PULL
+  PUSH
+  FULL
+  INCREMENTAL
+}
+
+enum SyncTrigger {
+  MANUAL
+  CRON
+  N8N
+  API
+}
+
+enum SyncStatus {
+  IN_PROGRESS
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+enum StagingEmployeeStatus {
+  NEW
+  PROCESSED
+  ERROR
+  DUPLICATE
+  ORPHAN
+}
+
+enum StagingExitStatus {
+  NEW
+  PROCESSED
+  ERROR
+  DUPLICATE
+}
+
+enum StagingGenesysStatus {
+  NEW
+  PROCESSED
+  ERROR
+  ORPHAN
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+}

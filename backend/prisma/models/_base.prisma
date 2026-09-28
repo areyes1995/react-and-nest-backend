@@ -1,0 +1,23 @@
+// ======================================================
+// PRISMA SCHEMA — MODU (multi-file: prisma/models)
+// ------------------------------------------------------
+// Convenciones:
+//   * IDs: `BigInt` en tablas de datos; `Int` en la tabla de plataforma (`SystemUser`).
+//   * Timestamps: `createdAt` / `updatedAt`; soft delete: `deletedAt`.
+//   * Secretos: se cifran a nivel de aplicación (AES-256-GCM). El schema
+//     solo guarda el ciphertext + versión de llave (NUNCA secretos en claro).
+//   * Tablas vectoriales (RAG): NO gestionadas por migraciones Prisma;
+//     se crean/restauran con el seeder `prisma/seeders/vector.seeder.ts`.
+//   * Organización de archivos:
+//       _base.prisma         → generator, datasource, convenciones
+//       enums.prisma         → todos los enums, agrupados por dominio
+//       <dominio>/*.prisma   → modelos agrupados por dominio
+// ======================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

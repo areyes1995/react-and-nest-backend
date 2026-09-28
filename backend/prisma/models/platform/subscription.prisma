@@ -1,0 +1,45 @@
+// ======================================================
+// SUSCRIPCIONES — qué plan pagó cada estudiante
+// ------------------------------------------------------
+// Una fila por compra: el historial queda entero y la
+// suscripción vigente es la última ACTIVE cuyo periodo
+// no ha terminado. Nunca se guardan datos de tarjeta:
+// con una pasarela real (Stripe, PayPal, Google Pay)
+// los datos van directos a ella y aquí solo queda su
+// referencia (`providerRef`).
+//
+// `provider = simulated` marca las compras hechas con
+// los pagos en modo simulado (PAYMENTS_LIVE sin activar).
+// ======================================================
+
+model Subscription {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /** `premium` o `gold` (catálogo en frontend/src/features/pricing/plans.ts). */
+  planId String @db.VarChar(20)
+  /** `monthly` o `annual`. */
+  cycle  String @db.VarChar(10)
+
+  status SubscriptionStatus @default(ACTIVE)
+
+  /** `simulated`, `stripe`, `paypal` o `google`. */
+  provider    String  @db.VarChar(20)
+  /** Id de la suscripción/cobro en la pasarela. */
+  providerRef String? @db.VarChar(200)
+  /** Método elegido en el checkout: `card`, `paypal` o `google`. */
+  method      String  @db.VarChar(20)
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @db.VarChar(3)
+
+  currentPeriodEnd DateTime
+  canceledAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+}

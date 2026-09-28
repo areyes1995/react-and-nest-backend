@@ -1,0 +1,21 @@
+// ======================================================
+// RAG — ingestion_runs
+// ======================================================
+
+model IngestionRun {
+  id            BigInt    @id @default(autoincrement())
+  batchName     String?   @map("batch_name") @db.VarChar(200)
+  sourceRoot    String?   @map("source_root") @db.Text
+  status        String    @default("running") @db.VarChar(50)
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  documentCount Int       @default(0) @map("document_count")
+  chunkCount    Int       @default(0) @map("chunk_count")
+  errorCount    Int       @default(0) @map("error_count")
+  notes         String?   @db.Text
+
+  chunks DocumentChunk[]
+
+  @@index([status])
+  @@map("ingestion_runs")
+}

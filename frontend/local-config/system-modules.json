@@ -1,0 +1,62 @@
+[
+  {
+    "id": "mod_records",
+    "source": "base",
+    "label": "Records View",
+    "slug": "records",
+    "color": "blue",
+    "icon": "ClipboardList",
+    "viewOptions": [
+      {
+        "label": "Overview",
+        "slug": "overview",
+        "description": "RAG search and document upload",
+        "kind": "summary"
+      },
+      {
+        "label": "Upload",
+        "slug": "upload",
+        "description": "Add documents to the index",
+        "kind": "upload"
+      }
+    ],
+    "columns": [
+      {
+        "key": "id",
+        "header": "ID",
+        "type": "text"
+      },
+      {
+        "key": "title",
+        "header": "Title",
+        "type": "text"
+      },
+      {
+        "key": "category",
+        "header": "Category",
+        "type": "text",
+        "chartGroup": true
+      },
+      {
+        "key": "status",
+        "header": "Status",
+        "type": "select",
+        "options": [
+          "Active",
+          "Pending",
+          "Archived"
+        ]
+      },
+      {
+        "key": "lastUpdated",
+        "header": "Last Updated",
+        "type": "date"
+      },
+      {
+        "key": "owner",
+        "header": "Owner",
+        "type": "text"
+      }
+    ]
+  }
+]

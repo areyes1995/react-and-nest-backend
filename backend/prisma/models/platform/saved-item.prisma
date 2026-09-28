@@ -1,0 +1,39 @@
+// ======================================================
+// GUARDADOS — la biblioteca personal del estudiante
+// ------------------------------------------------------
+// Antes vivían en localStorage: se perdían al cambiar de
+// navegador y no había forma de verlos todos juntos.
+// Aquí solo se guarda la referencia al contenido, no el
+// contenido: el currículo, los artículos y los videos
+// siguen versionados en el frontend.
+//
+// `title` y `url` son una copia del momento en que se
+// guardó. Sirven para pintar la lista sin resolver cada
+// id contra el catálogo y para que un contenido retirado
+// siga siendo reconocible en la página de guardados.
+// ======================================================
+
+model SavedItem {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind SavedItemKind
+
+  /** `id` del contenido en el catálogo del frontend. */
+  contentId String @db.VarChar(120)
+
+  title String? @db.VarChar(200)
+  url   String? @db.VarChar(300)
+
+  /** Nota personal del estudiante sobre lo guardado. */
+  note String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Guardar dos veces lo mismo es una sola fila: el botón es un interruptor.
+  @@unique([userId, kind, contentId])
+  @@index([userId, createdAt])
+}

@@ -1,0 +1,18 @@
+// ======================================================
+// RAG — embedding_models
+// ======================================================
+
+model EmbeddingModel {
+  id                  BigInt   @id @default(autoincrement())
+  provider            String   @db.VarChar(100)
+  modelName           String   @map("model_name") @db.VarChar(200)
+  embeddingDimensions Int?     @map("embedding_dimensions")
+  modelVersion        String?  @map("model_version") @db.VarChar(50)
+  notes               String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  chunks DocumentChunk[]
+
+  @@unique([provider, modelName, modelVersion])
+  @@map("embedding_models")
+}

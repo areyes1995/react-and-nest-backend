@@ -1,0 +1,132 @@
+# ==========================
+# Root — monorepo Uapaverse
+# ==========================
+
+# ── dependencies ──
+node_modules/
+.pnp/
+.pnp.js
+.pnpm-store/
+.pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ── builds ──
+dist/
+build/
+out/
+.next/
+.output/
+.turbo/
+.cache/
+.parcel-cache/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+.vite/
+frontend/dist/
+frontend/dist-ssr/
+backend/dist/
+
+# ── env & secrets — nunca se suben ──
+.env
+.env.*
+!.env.example
+!.env.sample
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+# mantiene los ejemplos versionados
+!backend/.env.example
+!frontend/.env.example
+!**/.env.example
+
+# ── logs & runtime ──
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+pids
+*.pid
+*.seed
+*.pid.lock
+report.*.json
+.tmp/
+.temp/
+tmp/
+
+# ── storage & uploads (backend) ──
+backend/storage/
+backend/uploads/
+backend/storage/logs/
+frontend/.env
+storage/
+uploads/
+!backend/storage/.gitkeep
+!storage/.gitkeep
+
+# ── docker ──
+# ignora overrides locales pero versiona el compose principal
+docker-compose.override.yml
+.docker/
+
+# ── prisma ──
+# cliente generado vive en node_modules; no versionar
+# migrations NO se versionan (decisión del proyecto)
+backend/prisma/migrations/
+**/prisma/migrations/
+# ignora DBs locales si existen
+*.db
+*.sqlite
+*.sqlite3
+prisma/*.db
+
+# ── OS ──
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── IDEs ──
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.code-workspace
+
+# ── testing & tooling ──
+.jest/
+.jest-cache/
+.vitest/
+coverage/
+.nyc_output/
+
+# ── misc ──
+*.orig
+*.bak
+*.tmp
+.eslintcache
+.stylelintcache
+.prettiercache

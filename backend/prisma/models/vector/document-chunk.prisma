@@ -1,0 +1,31 @@
+// ======================================================
+// RAG — document_chunks
+// ======================================================
+
+model DocumentChunk {
+  id               BigInt                       @id @default(autoincrement())
+  documentId       BigInt                       @map("document_id")
+  ingestionRunId   BigInt?                      @map("ingestion_run_id")
+  embeddingModelId BigInt?                      @map("embedding_model_id")
+  chunkIndex       Int                          @map("chunk_index") @db.SmallInt
+  chunkHashSha256  String                       @map("chunk_hash_sha256") @db.VarChar(64)
+  content          String                       @db.Text
+  tokenCount       Int?                         @map("token_count")
+  pageStart        Int?                         @map("page_start")
+  pageEnd          Int?                         @map("page_end")
+  sectionTitle     String?                      @map("section_title") @db.VarChar(500)
+  embedding        Unsupported("vector(1024)")?
+  metadata         Json                         @default("{}")
+  searchVector     Unsupported("tsvector")?     @map("search_vector")
+  createdAt        DateTime                     @default(now()) @map("created_at")
+
+  document       Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  ingestionRun   IngestionRun?   @relation(fields: [ingestionRunId], references: [id], onDelete: SetNull)
+  embeddingModel EmbeddingModel? @relation(fields: [embeddingModelId], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@index([ingestionRunId])
+  @@index([embeddingModelId])
+  @@map("document_chunks")
+}

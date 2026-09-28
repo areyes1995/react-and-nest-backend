@@ -1,0 +1,46 @@
+// ======================================================
+// PLATAFORMA — usuario del sistema, auditoría, notificaciones
+// ======================================================
+
+model SystemUser {
+  id         Int     @id @default(autoincrement())
+  firstName  String  @db.VarChar(100)
+  lastName   String  @db.VarChar(100)
+  employeeId String? @db.VarChar(50)
+  email      String  @unique @db.VarChar(150)
+
+  passwordHash String @db.VarChar(255)
+
+  phoneNumber String? @db.VarChar(25)
+  isActive    Boolean @default(true)
+
+  emailVerified     Boolean @default(false)
+  mustChangePassword Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  systemLogs      SystemLog[]
+  aiAnalysis      AiAnalysis[]
+  notifications   Notification[]
+  createdAuthLogs AuthLog[]        @relation("AuthLogCreatedBy")
+  roles           SystemUserRole[]
+
+  // Biblioteca personal: artículos, clases y videos guardados.
+  savedItems SavedItem[]
+
+  // Planes de pago comprados (historial completo).
+  subscriptions Subscription[]
+
+  // Publicación de contenido de la academia (quién tocó qué por última vez).
+  academyCourses        AcademyCourse[]        @relation("AcademyCourseUpdatedBy")
+  academyLessons        AcademyLesson[]        @relation("AcademyLessonUpdatedBy")
+
+  // Ajustes globales (estilo de mesa por defecto…).
+  appSettings AppSetting[] @relation("AppSettingUpdatedBy")
+
+  @@index([isActive])
+  @@index([firstName, lastName])
+  @@index([employeeId])
+}

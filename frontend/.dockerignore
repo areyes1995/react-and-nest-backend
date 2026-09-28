@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+*.local
+npm-debug.log*
+.dockerignore
+Dockerfile
+docker-compose.yml
+.git
+.gitignore
+.vscode
+.idea

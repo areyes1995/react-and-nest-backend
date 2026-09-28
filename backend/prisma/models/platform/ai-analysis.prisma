@@ -1,0 +1,39 @@
+model AiAnalysis {
+  id Int @id @default(autoincrement())
+
+  projectId BigInt?
+  // project   Project? @relation(fields: [projectId], references: [id])
+
+  analysisType AiAnalysisType
+
+  analyzedById Int?
+  analyzedBy   SystemUser? @relation(fields: [analyzedById], references: [id])
+
+  provider      String? @db.VarChar(30)
+  model         String  @db.VarChar(50)
+  modelVersion  String? @db.VarChar(50)
+  promptVersion String? @db.VarChar(20)
+
+  prompt    Json
+  response  Json
+  inputHash String? @db.VarChar(64)
+
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  estimatedCost    Decimal? @db.Decimal(10, 6)
+  processingTimeMs Int?
+
+  status       AiAnalysisStatus @default(COMPLETED)
+  errorMessage String?          @db.Text
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([projectId])
+  @@index([analyzedById])
+  @@index([status])
+  @@index([createdAt])
+  @@index([analysisType])
+  @@index([inputHash])
+}

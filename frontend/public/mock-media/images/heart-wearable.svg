@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<rect width="1200" height="800" fill="#f4f0e8"/>
+
+<ellipse cx="600" cy="420" rx="330" ry="200" fill="#e9d9ca"/><rect x="420" y="320" width="360" height="200" rx="90" fill="#fff" stroke="#23201c" stroke-width="3"/>
+<rect x="500" y="370" width="200" height="100" rx="20" fill="#23201c"/><path d="M520 420 l30 0 l12 -26 l18 52 l14 -26 l30 0 l10 -12 l12 12 l24 0" stroke="#e5566f" stroke-width="5" fill="none"/>
+<circle cx="460" cy="420" r="16" fill="#e5566f" opacity="0.6"/><circle cx="740" cy="420" r="16" fill="#e5566f" opacity="0.6"/>
+<text x="840" y="300" font-family="Helvetica" font-size="22" fill="#23201c" opacity="0.7">3 mm · flexible</text>
+<g font-family="Helvetica, Arial, sans-serif" fill="#23201c">
+<rect x="48" y="722" width="36" height="4" fill="#23201c" opacity="0.8"/>
+<text x="48" y="756" font-size="22" font-weight="600" letter-spacing="3" opacity="0.75">PROTOTIPO DEL PARCHE</text>
+</g>
+</svg>

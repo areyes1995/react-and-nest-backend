@@ -1,0 +1,1 @@
+export { TextCarousel } from './TextCarousel'

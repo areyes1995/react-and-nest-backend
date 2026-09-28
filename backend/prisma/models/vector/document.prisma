@@ -1,0 +1,28 @@
+// ======================================================
+// RAG — documents
+// ======================================================
+
+model Document {
+  id               BigInt   @id @default(autoincrement())
+  sourcePath       String   @map("source_path") @db.Text
+  originalFilename String   @map("original_filename") @db.Text
+  fileHashSha256   String   @map("file_hash_sha256") @db.VarChar(64)
+  fileSizeBytes    BigInt?  @map("file_size_bytes")
+  mimeType         String?  @map("mime_type") @db.VarChar(200)
+  title            String?  @db.Text
+  department       String?  @db.Text
+  project          String?  @db.Text
+  owner            String?  @db.Text
+  sensitivity      String   @default("internal") @db.VarChar(50)
+  status           String   @default("active") @db.VarChar(50)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @map("updated_at")
+  metadata         Json     @default("{}")
+
+  chunks DocumentChunk[]
+
+  @@index([fileHashSha256])
+  @@index([department, project])
+  @@index([sensitivity])
+  @@map("documents")
+}

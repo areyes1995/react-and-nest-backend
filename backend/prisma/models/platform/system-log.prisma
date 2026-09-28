@@ -1,0 +1,24 @@
+model SystemLog {
+  id Int @id @default(autoincrement())
+
+  userId Int?
+  user   SystemUser? @relation(fields: [userId], references: [id])
+
+  actionType String @db.VarChar(100)
+  entityName String @db.VarChar(100)
+  entityId   Int?
+
+  oldValue String? @db.Text
+  value    String? @db.Text
+
+  ipAddress String? @db.VarChar(45)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([actionType])
+  @@index([entityName, entityId])
+  @@index([createdAt])
+}

@@ -1,0 +1,223 @@
+// ======================================================
+// ACADEMIA — el currículo completo
+// ------------------------------------------------------
+// Nivel → curso → clase → bloque. Todo el contenido de
+// las clases vive aquí y se carga con el seeder
+// (`pnpm db:seed:academy`), que es idempotente: las
+// claves estables son `slug` (nivel), `code` (curso y
+// clase) y la posición de cada bloque.
+//
+// Una clase no es HTML: es una lista ordenada de
+// bloques tipados. Las columnas de `AcademyLessonBlock`
+// que no aplican a su `type` quedan a NULL; lo que es
+// una colección con estructura propia (manos de
+// ejemplo, preguntas del quiz) va en su propia tabla.
+//
+// Lo que decide un administrador (publicar, video,
+// notas internas) vive en las mismas filas, y el
+// seeder NUNCA lo sobrescribe al volver a sembrar.
+// ======================================================
+
+model AcademyLevel {
+  id Int @id @default(autoincrement())
+
+  /** Identificador del nivel en la API y en la URL (`beginner`). */
+  slug String @unique @db.VarChar(40)
+
+  title       String @db.VarChar(120)
+  subtitle    String @db.VarChar(200)
+  description String @db.Text
+
+  /** Variable CSS del color del nivel (`var(--level-beginner)`). */
+  color String @db.VarChar(80)
+  /** Nombre del icono de lucide-react. */
+  icon  String @db.VarChar(60)
+
+  position Int
+
+  courses AcademyCourse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([position])
+}
+
+model AcademyCourse {
+  id Int @id @default(autoincrement())
+
+  /** Clave estable del curso (`c-ranges`). */
+  code String @unique @db.VarChar(120)
+  slug String @unique @db.VarChar(120)
+
+  levelId Int
+  level   AcademyLevel @relation(fields: [levelId], references: [id], onDelete: Restrict)
+
+  title   String @db.VarChar(200)
+  summary String @db.Text
+  icon    String @db.VarChar(60)
+
+  /** Orden dentro del nivel. */
+  position Int
+
+  // ── Decisiones del administrador ──
+  published Boolean @default(true)
+  /** Nota interna del equipo docente (no se muestra al estudiante). */
+  notes     String? @db.Text
+
+  updatedById Int?
+  updatedBy   SystemUser? @relation("AcademyCourseUpdatedBy", fields: [updatedById], references: [id])
+
+  outcomes AcademyCourseOutcome[]
+  lessons  AcademyLesson[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([levelId, position])
+  @@index([published])
+}
+
+/** "Al terminar sabrás…": lo que el estudiante sabrá hacer al acabar el curso. */
+model AcademyCourseOutcome {
+  id Int @id @default(autoincrement())
+
+  courseId Int
+  course   AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  position Int
+  text     String @db.VarChar(300)
+
+  @@unique([courseId, position])
+}
+
+model AcademyLesson {
+  id Int @id @default(autoincrement())
+
+  /**
+   * Clave estable de la clase (`l-rng-thinking`). Es lo que guardan el
+   * progreso y los favoritos del estudiante: no se cambia nunca.
+   */
+  code String @unique @db.VarChar(120)
+
+  courseId Int
+  course   AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  slug    String            @db.VarChar(120)
+  title   String            @db.VarChar(200)
+  summary String            @db.Text
+  kind    AcademyLessonKind @default(LESSON)
+
+  /** Duración estimada en minutos. */
+  minutes Int
+  xp      Int
+
+  /** Orden dentro del curso. */
+  position Int
+
+  // ── Decisiones del administrador ──
+  published Boolean @default(true)
+
+  // El reproductor solo aparece si `videoEnabled` está activo Y hay una fuente
+  // válida. Así una clase puede seguir siendo solo texto.
+  videoEnabled     Boolean              @default(false)
+  videoProvider    AcademyVideoProvider @default(NONE)
+  videoUrl         String?              @db.VarChar(500)
+  videoTitle       String?              @db.VarChar(200)
+  videoDurationSec Int?
+
+  notes String? @db.Text
+
+  updatedById Int?
+  updatedBy   SystemUser? @relation("AcademyLessonUpdatedBy", fields: [updatedById], references: [id])
+
+  blocks AcademyLessonBlock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, slug])
+  @@index([courseId, position])
+  @@index([published])
+}
+
+model AcademyLessonBlock {
+  id Int @id @default(autoincrement())
+
+  lessonId Int
+  lesson   AcademyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  /** Orden dentro de la clase. */
+  position Int
+  type     AcademyBlockType
+
+  // ── HEADING, PARAGRAPH y CALLOUT ── (admiten **negrita**)
+  text  String?             @db.Text
+  // ── CALLOUT ──
+  title String?             @db.VarChar(200)
+  tone  AcademyCalloutTone?
+
+  // ── LIST ──
+  ordered Boolean?
+  items   String[]
+
+  // ── TABLE ── (`rows` es string[][]: una fila por elemento)
+  headers String[]
+  rows    Json?
+
+  // ── SPOT ── (cartas en notación corta del motor: `As Kh`)
+  hole     String? @db.VarChar(20)
+  board    String? @db.VarChar(40)
+  question String? @db.Text
+  answer   String? @db.Text
+
+  // ── DRILL ── (enlace a la mesa de práctica)
+  /** Entrenamiento que corrige la práctica (`open-raise`…); NULL = el del nivel. */
+  drillMode  String? @db.VarChar(40)
+  seats      Int?
+  /** Manos sugeridas para la sesión. */
+  drillHands Int?
+  goal       String? @db.VarChar(300)
+
+  // ── HANDS y QUIZ ──
+  hands     AcademyBlockHand[]
+  questions AcademyBlockQuestion[]
+
+  @@unique([lessonId, position])
+}
+
+/** Mano de ejemplo de un bloque HANDS: cartas reales con su etiqueta. */
+model AcademyBlockHand {
+  id Int @id @default(autoincrement())
+
+  blockId Int
+  block   AcademyLessonBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  position Int
+  /** Notación corta: `As Kh`. */
+  cards    String  @db.VarChar(20)
+  label    String  @db.VarChar(120)
+  note     String? @db.Text
+
+  @@unique([blockId, position])
+}
+
+/** Pregunta de un bloque QUIZ dentro de una clase. */
+model AcademyBlockQuestion {
+  id Int @id @default(autoincrement())
+
+  blockId Int
+  block   AcademyLessonBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  position Int
+  /** Identificador dentro del quiz (`q1`). */
+  code     String @db.VarChar(40)
+
+  question    String   @db.Text
+  options     String[]
+  answerIndex Int
+  /** Por qué la correcta es la correcta: se muestra siempre tras responder. */
+  explanation String   @db.Text
+
+  @@unique([blockId, position])
+}

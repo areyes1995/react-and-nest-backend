@@ -1,0 +1,65 @@
+// ======================================================
+// PLATAFORMA — RBAC: roles, recursos, permisos, asignaciones
+// ------------------------------------------------------
+// Roadmap (07-roadmap-todo.md §3.2): modelo de permisos
+// granular. Los roles se siembran con el seeder
+// (prisma/seeders/roles.seeder.ts) y son la única fuente
+// de verdad: `SystemUser` se relaciona con `Role` vía la
+// tabla N:N `SystemUserRole`.
+// ======================================================
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(50)
+  description String? @db.VarChar(255)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  permissions RolePermission[]
+  users       SystemUserRole[]
+
+  @@index([isActive])
+}
+
+model Resource {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(100)
+  description String? @db.VarChar(255)
+
+  permissions Permission[]
+}
+
+model Permission {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(150)
+  description String? @db.VarChar(255)
+  resourceId  Int
+
+  resource Resource         @relation(fields: [resourceId], references: [id])
+  roles    RolePermission[]
+
+  @@index([resourceId])
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model SystemUserRole {
+  userId Int
+  roleId Int
+
+  user SystemUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}

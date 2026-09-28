@@ -1,0 +1,74 @@
+# Uapaverse Backend — entorno de desarrollo standalone con Docker.
+# API con recarga en caliente + Postgres + Redis.
+# La API lee `.env` (env_file); DATABASE_URL/REDIS_* se ajustan aquí
+# a la red de Docker sin tocar tu `.env` local.
+#
+# Uso (desde backend/):
+#   docker compose up --build
+# API → http://localhost:4000/api/v1  (contenedor: 3000)
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: uapaverse_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-uapaverse}
+    ports:
+      - '${DATABASE_PORT:-5432}:5432'
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: uapaverse_redis_dev
+    restart: unless-stopped
+    command: redis-server --requirepass "${REDIS_PASSWORD:-redis_dev_password}"
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_dev_data:/data
+
+  api:
+    image: node:22-slim
+    container_name: uapaverse_api_dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - api_node_modules:/app/node_modules
+    ports:
+      - '4000:3000'
+    env_file:
+      - .env
+    environment:
+      PORT: '3000'
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${DATABASE_NAME:-uapaverse}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: '5432'
+      DATABASE_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-uapaverse}
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # Entrypoint compartido: install → generate → migrate deploy →
+    # seed opcional (RUN_SEEDERS=true) → start:dev con hot reload.
+    # Ver docker-entrypoint.dev.sh
+    entrypoint: ['sh', '/app/docker-entrypoint.dev.sh']
+
+volumes:
+  pg_dev_data:
+  redis_dev_data:
+  api_node_modules:
