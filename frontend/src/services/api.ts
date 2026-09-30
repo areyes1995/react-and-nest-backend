@@ -3,7 +3,6 @@
 // ──────────────────────────────────────────────
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
-const MOCK_ENABLED = import.meta.env.VITE_MOCK_ENABLED === 'true'
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -221,53 +220,48 @@ export function del<T = unknown>(
   return request<T>(path, { method: 'DELETE' })
 }
 
-export { MOCK_ENABLED, BASE_URL }
+export { BASE_URL }
 export type { ApiResponse, RequestOptions }
 
-/**
- * Petición que devuelve un Blob (audio). Replica el flujo de `request`:
- * token + un reintento tras renovar la sesión ante un 401.
- */
-export async function requestBlob(
-  path: string,
-  body?: unknown,
-): Promise<{ ok: boolean; status: number; blob?: Blob; error?: string }> {
-  const attempt = async (): Promise<Response | null> => {
-    const token = getToken()
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (token) headers['Authorization'] = `Bearer ${token}`
-    try {
-      return await fetch(buildUrl(path), {
-        method: 'POST',
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      })
-    } catch (err) {
-      return null
-    }
-  }
+// ─── Peticiones sin JSON (archivos) ───────────
 
+async function errorFrom(response: Response): Promise<string> {
+  try {
+    const data = (await response.clone().json()) as { message?: string | string[] }
+    if (typeof data?.message === 'string') return data.message
+    if (Array.isArray(data?.message)) return data.message.join('. ')
+  } catch {
+    /* el error no es JSON */
+  }
+  return response.statusText || 'Error de red'
+}
+
+/** fetch con token + un reintento tras renovar la sesión ante un 401. */
+async function authorizedFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const attempt = () => {
+    const token = getToken()
+    const headers = new Headers(init.headers)
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    return fetch(buildUrl(path), { ...init, headers })
+  }
   let response = await attempt()
-  if (!response) return { ok: false, status: 0, error: 'Network error' }
   if (response.status === 401 && getToken() && getRefreshToken() && path !== REFRESH_PATH) {
     if (await refreshSession()) response = await attempt()
   }
-  if (!response) return { ok: false, status: 0, error: 'Network error' }
   if (response.status === 401) notifyUnauthorized()
-  if (!response.ok) {
-    let error = response.statusText
-    try {
-      const data = (await response.clone().json()) as { message?: string | string[] }
-      error =
-        typeof data?.message === 'string'
-          ? data.message
-          : Array.isArray(data?.message)
-            ? data.message.join('. ')
-            : error
-    } catch {
-      /* el error no es JSON: se usa statusText */
-    }
-    return { ok: false, status: response.status, error }
-  }
-  return { ok: true, status: response.status, blob: await response.blob() }
+  return response
+}
+
+/** Descarga un archivo protegido como Blob. */
+export async function getBlob(path: string): Promise<Blob> {
+  const response = await authorizedFetch(path)
+  if (!response.ok) throw new Error(await errorFrom(response))
+  return response.blob()
+}
+
+/** Envía un formulario multipart (subida de archivos). */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  const response = await authorizedFetch(path, { method: 'POST', body: form })
+  if (!response.ok) throw new Error(await errorFrom(response))
+  return (await response.json()) as T
 }

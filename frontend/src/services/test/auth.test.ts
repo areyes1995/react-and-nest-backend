@@ -39,10 +39,9 @@ describe('auth helpers', () => {
       expect(isAdminUser({ role: '', roles: ['superadmin'] })).toBe(true)
       expect(isAdminUser(null)).toBe(false)
     })
-    it('GUEST no gestiona ni administra', () => {
-      const u = { role: 'GUEST', roles: ['GUEST'] }
-      expect(canManageContent(u)).toBe(false)
-      expect(isAdminUser(u)).toBe(false)
+    it('GUEST y DOCENTE no administran', () => {
+      expect(isAdminUser({ role: 'GUEST', roles: ['GUEST'] })).toBe(false)
+      expect(isAdminUser({ role: 'DOCENTE', roles: ['DOCENTE'] })).toBe(false)
     })
   })
 

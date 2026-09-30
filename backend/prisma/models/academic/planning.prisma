@@ -1,0 +1,133 @@
+// ======================================================
+// PLANIFICACIÓN — programaciones curriculares, planes de
+// clase (plantilla oficial "Esquema plan de clase"),
+// presentaciones y actividades interactivas.
+// ======================================================
+
+/// Programación anual, unidad didáctica, experiencia de aprendizaje o proyecto.
+model LearningUnit {
+  id           Int       @id @default(autoincrement())
+  teacherId    Int
+  schoolYearId Int?
+  gradeId      Int
+  sectionId    Int?
+  kind         UnitKind  @default(UNIT)
+  title        String    @db.VarChar(200)
+  description  String?   @db.Text
+  startDate    DateTime? @db.Date
+  endDate      DateTime? @db.Date
+  order        Int       @default(0)
+  color        String?   @db.VarChar(9)
+
+  specificCompetenceIds Int[]
+  indicatorIds          Int[]
+  contentIds            Int[]
+  /// Criterios de evaluación y evidencias esperadas.
+  evaluationCriteria    String[]
+  evidences             String[]
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher     SystemUser      @relation("UnitTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  schoolYear  SchoolYear?     @relation(fields: [schoolYearId], references: [id], onDelete: SetNull)
+  grade       CurriculumGrade @relation(fields: [gradeId], references: [id])
+  section     Section?        @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  lessonPlans LessonPlan[]
+
+  @@index([teacherId, gradeId])
+}
+
+/// Plan de clase / sesión de aprendizaje.
+/// `moments` sigue la plantilla oficial: por cada momento (Inicio,
+/// Desarrollo, Cierre) → tiempo, actividades, metacognición,
+/// evidencias, técnicas e instrumentos y recursos.
+model LessonPlan {
+  id              Int              @id @default(autoincrement())
+  teacherId       Int
+  gradeId         Int
+  sectionId       Int?
+  unitId          Int?
+  title           String           @db.VarChar(200)
+  topic           String           @db.VarChar(200)
+  date            DateTime?        @db.Date
+  durationMinutes Int              @default(45)
+  purpose         String?          @db.Text
+  strategies      String[]
+  status          LessonPlanStatus @default(DRAFT)
+
+  specificCompetenceIds Int[]
+  indicatorIds          Int[]
+  contentIds            Int[]
+
+  moments    Json
+  /// Evaluación de la sesión: { type, instruments[], evidences[] }.
+  evaluation Json?
+  /// Tarea o asignación para la casa.
+  assignment String? @db.Text
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher       SystemUser      @relation("LessonPlanTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  grade         CurriculumGrade @relation(fields: [gradeId], references: [id])
+  section       Section?        @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  unit          LearningUnit?   @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  presentations Presentation[]
+  events        CalendarEvent[]
+
+  @@index([teacherId, date])
+  @@index([sectionId])
+}
+
+/// Presentación de clase construida con bloques reutilizables.
+/// `slides` = [{ id, layout, title, blocks: [{ type, ... }] }].
+model Presentation {
+  id           Int     @id @default(autoincrement())
+  teacherId    Int
+  lessonPlanId Int?
+  title        String  @db.VarChar(200)
+  subtitle     String? @db.VarChar(200)
+  theme        String  @default("pastel") @db.VarChar(30)
+  slides       Json
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher    SystemUser  @relation("PresentationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  lessonPlan LessonPlan? @relation(fields: [lessonPlanId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId])
+}
+
+/// Actividad interactiva sin programación (quiz, relacionar, ruleta…).
+model InteractiveActivity {
+  id           Int          @id @default(autoincrement())
+  teacherId    Int
+  gradeId      Int?
+  type         ActivityType
+  title        String       @db.VarChar(200)
+  topic        String?      @db.VarChar(200)
+  instructions String?      @db.Text
+  content      Json
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher SystemUser       @relation("ActivityTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  grade   CurriculumGrade? @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, type])
+}

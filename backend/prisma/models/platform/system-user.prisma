@@ -14,7 +14,7 @@ model SystemUser {
   phoneNumber String? @db.VarChar(25)
   isActive    Boolean @default(true)
 
-  emailVerified     Boolean @default(false)
+  emailVerified      Boolean @default(false)
   mustChangePassword Boolean @default(true)
 
   createdAt DateTime  @default(now())
@@ -29,6 +29,24 @@ model SystemUser {
 
   // Ajustes globales.
   appSettings AppSetting[] @relation("AppSettingUpdatedBy")
+
+  // Educraft — perfil docente y registros académicos propios.
+  teacherProfile TeacherProfile?
+  schoolYears    SchoolYear[]           @relation("SchoolYearTeacher")
+  sections       Section[]              @relation("SectionTeacher")
+  observations   StudentObservation[]   @relation("ObservationTeacher")
+  reportLinks    ParentReportLink[]     @relation("ReportLinkTeacher")
+  assessments    Assessment[]           @relation("AssessmentTeacher")
+  units          LearningUnit[]         @relation("UnitTeacher")
+  lessonPlans    LessonPlan[]           @relation("LessonPlanTeacher")
+  presentations  Presentation[]         @relation("PresentationTeacher")
+  activities     InteractiveActivity[]  @relation("ActivityTeacher")
+  questions      Question[]             @relation("QuestionTeacher")
+  exams          Exam[]                 @relation("ExamTeacher")
+  instruments    EvaluationInstrument[] @relation("InstrumentTeacher")
+  events         CalendarEvent[]        @relation("EventTeacher")
+  resources      LibraryResource[]      @relation("ResourceTeacher")
+  tutorMessages  TutorMessage[]         @relation("TutorMessageUser")
 
   @@index([isActive])
   @@index([firstName, lastName])

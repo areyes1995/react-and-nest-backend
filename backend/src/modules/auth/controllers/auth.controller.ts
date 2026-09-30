@@ -24,6 +24,7 @@ import { AuthLogService } from 'src/modules/auth-log/auth-log.service';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { RequestPasswordResetDto } from '../dto/request-password-reset.dto';
+import { SignupAuthDto, SignupResultDto } from '../dto/signup-auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -61,6 +62,19 @@ export class AuthController {
       Expiration: result.Expiration,
       User: result.User,
     };
+  }
+
+  @Post('signup')
+  @Public()
+  @ApiResponse({
+    status: 201,
+    description:
+      'Cuenta docente creada. Devuelve la sesión o indica que falta validar el correo.',
+    type: SignupResultDto,
+  })
+  @ApiResponse({ status: 409, description: 'El correo ya está registrado.' })
+  async signup(@Body() dto: SignupAuthDto): Promise<SignupResultDto> {
+    return this.authService.signup(dto);
   }
 
   @Post('refresh')

@@ -1,4 +1,4 @@
-# Starter Monorepo — docker-compose raíz (dev)
+# Educraft XYZ — docker-compose raíz (dev)
 # Orquesta backend (NestJS) + frontend (Vite) + Postgres (pgvector) + Redis
 #
 # Uso:
@@ -14,12 +14,12 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: starter_postgres_dev
+    container_name: educraft_postgres_dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      POSTGRES_DB: ${DATABASE_NAME:-starter}
+      POSTGRES_DB: ${DATABASE_NAME:-educraft}
     ports:
       - '${DATABASE_PORT:-5432}:5432'
     volumes:
@@ -32,7 +32,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: starter_redis_dev
+    container_name: educraft_redis_dev
     restart: unless-stopped
     command: redis-server --requirepass "${REDIS_PASSWORD:-redis_dev_password}"
     ports:
@@ -42,7 +42,7 @@ services:
 
   api:
     image: node:22-slim
-    container_name: starter_api_dev
+    container_name: educraft_api_dev
     working_dir: /app
     volumes:
       - ./backend:/app
@@ -57,10 +57,10 @@ services:
       PORT: '3000'
       DATABASE_USER: ${DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      DATABASE_NAME: ${DATABASE_NAME:-starter}
+      DATABASE_NAME: ${DATABASE_NAME:-educraft}
       DATABASE_HOST: postgres
       DATABASE_PORT: '5432'
-      DATABASE_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-starter}
+      DATABASE_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_NAME:-educraft}
       REDIS_HOST: redis
       REDIS_PORT: '6379'
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
@@ -73,7 +73,7 @@ services:
 
   frontend:
     image: node:22-slim
-    container_name: starter_frontend_dev
+    container_name: educraft_frontend_dev
     working_dir: /app
     volumes:
       - ./frontend:/app
@@ -82,7 +82,7 @@ services:
       - '5173:5173'
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api/v1}
-      VITE_APP_NAME: ${VITE_APP_NAME:-Starter}
+      VITE_APP_NAME: ${VITE_APP_NAME:-Educraft XYZ}
       VITE_AUTH_METHOD: ${VITE_AUTH_METHOD:-db}
     env_file:
       - ./frontend/.env

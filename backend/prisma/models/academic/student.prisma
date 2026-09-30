@@ -1,0 +1,112 @@
+// ======================================================
+// ESTUDIANTES — registro, expediente, asistencia,
+// observaciones y evidencias.
+// ======================================================
+
+model Student {
+  id         Int       @id @default(autoincrement())
+  sectionId  Int
+  listNumber Int?
+  firstName  String    @db.VarChar(100)
+  lastName   String    @db.VarChar(100)
+  documentId String?   @db.VarChar(40)
+  birthDate  DateTime? @db.Date
+  gender     String?   @db.VarChar(1)
+
+  guardianName  String? @db.VarChar(150)
+  guardianPhone String? @db.VarChar(30)
+  guardianEmail String? @db.VarChar(150)
+
+  /// Adecuaciones o situaciones particulares registradas por el docente.
+  notes    String? @db.Text
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  section          Section              @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  attendances      Attendance[]
+  competenceGrades CompetenceGrade[]
+  finalGrades      FinalGrade[]
+  scores           AssessmentScore[]
+  observations     StudentObservation[]
+  evidences        Evidence[]
+  reportLinks      ParentReportLink[]
+
+  @@index([sectionId, isActive])
+  @@index([lastName, firstName])
+}
+
+model Attendance {
+  id        Int              @id @default(autoincrement())
+  studentId Int
+  sectionId Int
+  date      DateTime         @db.Date
+  status    AttendanceStatus
+  note      String?          @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([sectionId, date])
+}
+
+model StudentObservation {
+  id          Int             @id @default(autoincrement())
+  studentId   Int
+  teacherId   Int
+  type        ObservationType
+  content     String          @db.Text
+  date        DateTime        @default(now()) @db.Date
+  aiGenerated Boolean         @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher SystemUser @relation("ObservationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, date])
+}
+
+/// Evidencia de aprendizaje (archivo o enlace) asociada a un estudiante
+/// y, opcionalmente, a una actividad calificada.
+model Evidence {
+  id           Int     @id @default(autoincrement())
+  studentId    Int
+  assessmentId Int?
+  title        String  @db.VarChar(150)
+  description  String? @db.Text
+  url          String? @db.Text
+  storageKey   String? @db.VarChar(500)
+  mimeType     String? @db.VarChar(120)
+
+  createdAt DateTime @default(now())
+
+  student    Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessment Assessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([assessmentId])
+}
+
+/// Enlace seguro de solo lectura para compartir el reporte con la familia.
+model ParentReportLink {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique @db.VarChar(64)
+  studentId Int
+  teacherId Int
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  student Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher SystemUser @relation("ReportLinkTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}

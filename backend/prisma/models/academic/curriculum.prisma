@@ -1,0 +1,102 @@
+// ======================================================
+// CURRÍCULO — Adecuación Curricular de Matemática
+// (MINERD, Nivel Secundario). Catálogo global de solo
+// lectura para los docentes: se siembra con
+// `prisma/seeders/curriculum.seeder.ts`.
+// ======================================================
+
+/// Grado del Nivel Secundario (1ro a 6to).
+model CurriculumGrade {
+  id    Int     @id @default(autoincrement())
+  code  String  @unique @db.VarChar(20) // SEC-1 … SEC-6
+  name  String  @db.VarChar(80) // "1ro de Secundaria"
+  level String  @default("SECUNDARIA") @db.VarChar(30)
+  cycle Int // 1 = Primer Ciclo, 2 = Segundo Ciclo
+  order Int
+  /// Énfasis del grado (p.ej. "Números racionales").
+  focus String? @db.Text
+
+  specificCompetences SpecificCompetence[]
+  indicators          AchievementIndicator[]
+  contents            CurriculumContent[]
+  sections            Section[]
+  units               LearningUnit[]
+  lessonPlans         LessonPlan[]
+  questions           Question[]
+  exams               Exam[]
+  instruments         EvaluationInstrument[]
+  activities          InteractiveActivity[]
+}
+
+/// Competencia fundamental del currículo dominicano.
+/// `gradingBlock` agrupa las 7 competencias en los 4 bloques
+/// del registro oficial de calificaciones (PC1…PC4).
+model FundamentalCompetence {
+  id           Int    @id @default(autoincrement())
+  code         String @unique @db.VarChar(40)
+  name         String @db.VarChar(120)
+  shortName    String @db.VarChar(40) // Etiqueta corta para gráficos
+  gradingBlock Int
+  order        Int
+
+  specificCompetences SpecificCompetence[]
+  indicators          AchievementIndicator[]
+  criteria            EvaluationCriterion[]
+  assessments         Assessment[]
+  questions           Question[]
+  exams               Exam[]
+  instruments         EvaluationInstrument[]
+}
+
+/// Competencia específica de un grado para una competencia fundamental.
+model SpecificCompetence {
+  id            Int    @id @default(autoincrement())
+  gradeId       Int
+  fundamentalId Int
+  description   String @db.Text
+
+  grade       CurriculumGrade       @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  fundamental FundamentalCompetence @relation(fields: [fundamentalId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeId, fundamentalId])
+}
+
+/// Indicador de logro de un grado.
+model AchievementIndicator {
+  id            Int    @id @default(autoincrement())
+  gradeId       Int
+  fundamentalId Int?
+  description   String @db.Text
+  order         Int    @default(0)
+
+  grade       CurriculumGrade        @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  fundamental FundamentalCompetence? @relation(fields: [fundamentalId], references: [id], onDelete: SetNull)
+
+  @@index([gradeId])
+}
+
+/// Contenido (conceptual, procedimental o actitudinal) de un grado.
+model CurriculumContent {
+  id          Int         @id @default(autoincrement())
+  gradeId     Int
+  kind        ContentKind
+  block       String?     @db.VarChar(80) // "Numeración", "Álgebra", "Geometría"…
+  description String      @db.Text
+  order       Int         @default(0)
+
+  grade CurriculumGrade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@index([gradeId, kind])
+}
+
+/// Criterio de evaluación del ciclo para una competencia fundamental.
+model EvaluationCriterion {
+  id            Int    @id @default(autoincrement())
+  cycle         Int
+  fundamentalId Int
+  description   String @db.Text
+
+  fundamental FundamentalCompetence @relation(fields: [fundamentalId], references: [id], onDelete: Cascade)
+
+  @@index([cycle, fundamentalId])
+}

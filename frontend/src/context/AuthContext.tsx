@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { login as apiLogin, validateToken, logout as apiLogout, preValidateCredentials } from '@services/auth'
 import { setUnauthorizedHandler } from '@services/api'
-import type { User, LoginCredentials } from '@services/auth'
+import type { User, LoginCredentials, AuthResponse } from '@services/auth'
 
 interface AuthContextType {
   user: User | null
@@ -22,6 +22,8 @@ interface AuthContextType {
   isSubmitting: boolean
   error: string | null
   login: (credentials: LoginCredentials) => Promise<void>
+  /** Inicia sesión con una respuesta ya obtenida (p. ej. tras registrarse). */
+  startSession: (auth: AuthResponse) => void
   logout: () => Promise<void>
   clearError: () => void
 }
@@ -105,6 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const startSession = useCallback((auth: AuthResponse) => {
+    localStorage.setItem('auth_token', auth.token)
+    if (auth.refreshToken) localStorage.setItem('refresh_token', auth.refreshToken)
+    setToken(auth.token)
+    setUser(auth.user)
+    setError(null)
+  }, [])
+
   // ─── Logout ────────────────────────────────
 
   const logout = useCallback(async () => {
@@ -133,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSubmitting,
         error,
         login,
+        startSession,
         logout,
         clearError,
       }}

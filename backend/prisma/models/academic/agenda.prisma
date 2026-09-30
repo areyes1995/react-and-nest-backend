@@ -1,0 +1,68 @@
+// ======================================================
+// AGENDA, BIBLIOTECA Y TUTOR IA
+// ======================================================
+
+/// Evento del calendario académico (clases, exámenes, reuniones,
+/// entregas, fechas institucionales/cívicas, vacaciones, recordatorios).
+model CalendarEvent {
+  id           Int               @id @default(autoincrement())
+  teacherId    Int
+  sectionId    Int?
+  lessonPlanId Int?
+  assessmentId Int?
+  type         CalendarEventType
+  title        String            @db.VarChar(200)
+  description  String?           @db.Text
+  startAt      DateTime
+  endAt        DateTime?
+  allDay       Boolean           @default(false)
+  color        String?           @db.VarChar(9)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher    SystemUser  @relation("EventTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  lessonPlan LessonPlan? @relation(fields: [lessonPlanId], references: [id], onDelete: SetNull)
+  assessment Assessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, startAt])
+}
+
+/// Recurso de la biblioteca del docente.
+model LibraryResource {
+  id          Int              @id @default(autoincrement())
+  teacherId   Int
+  title       String           @db.VarChar(200)
+  description String?          @db.Text
+  category    ResourceCategory
+  tags        String[]
+  /// Enlace externo (video, web) o URL pública del archivo subido.
+  url         String?          @db.Text
+  storageKey  String?          @db.VarChar(500)
+  fileName    String?          @db.VarChar(255)
+  mimeType    String?          @db.VarChar(120)
+  sizeBytes   Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher SystemUser @relation("ResourceTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, category])
+}
+
+/// Historial de conversación con el Tutor Virtual Docente.
+model TutorMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  role      String   @db.VarChar(12) // "user" | "assistant"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user SystemUser @relation("TutorMessageUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

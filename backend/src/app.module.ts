@@ -13,6 +13,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { RagModule } from './modules/rag/rag.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { EducraftModule } from './modules/educraft/educraft.module';
 
 import { PrismaModule } from 'prisma/prisma.module';
 import { HealthController } from './health.controller';
@@ -53,6 +54,8 @@ const bullConfig = {
         SMTP_PASSWORD: Joi.string().allow('').optional(),
         MAIL_FROM: Joi.string().allow('').optional(),
         FRONTEND_URL: Joi.string().uri().allow('').optional(),
+        OPENAI_MODEL: Joi.string().allow('').optional(),
+        APP_TIMEZONE: Joi.string().allow('').optional(),
       }),
     }),
     BullModule.forRoot(bullConfig),
@@ -68,6 +71,7 @@ const bullConfig = {
     MailerModule,
     RagModule,
     RbacModule,
+    EducraftModule,
   ],
   providers: [LoggerService],
   exports: [LoggerService],

@@ -2,16 +2,18 @@ import { PERMISSIONS } from './permissions.constants';
 import type { PermissionName } from './permissions.constants';
 
 // ──────────────────────────────────────────────
-// Roles base del starter:
+// Roles:
 // SUPERADMIN (bypass total), ADMIN (acceso total),
-// USER (uso general: dashboard, notificaciones, RAG
-// y análisis IA de lectura) y GUEST (solo lectura
-// mínima).
+// DOCENTE (espacio de trabajo del docente de
+// Matemática: planificación, clases, evaluación,
+// estudiantes, reportes e IA pedagógica),
+// USER (uso general) y GUEST (solo lectura mínima).
 // ──────────────────────────────────────────────
 
 export const ROLES = {
   SUPERADMIN: 'SUPERADMIN',
   ADMIN: 'ADMIN',
+  DOCENTE: 'DOCENTE',
   USER: 'USER',
   GUEST: 'GUEST',
 } as const;
@@ -35,6 +37,27 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
     name: ROLES.ADMIN,
     description: 'Acceso total. CRUD usuarios, roles, IA y auditoría',
     permissions: PERMISSIONS.map((p) => p.name),
+  },
+  {
+    name: ROLES.DOCENTE,
+    description:
+      'Docente de Matemática: planificación, clases, evaluación, estudiantes, reportes e IA',
+    permissions: [
+      'module:dashboard',
+      'module:educraft',
+      'notification:read',
+      'notification:update',
+      'curriculum:read',
+      'academic:manage',
+      'planning:manage',
+      'evaluation:manage',
+      'library:manage',
+      'report:manage',
+      'ai-pedagogy:use',
+      'ai-analysis:read',
+      'rag:read',
+      'rag:search',
+    ],
   },
   {
     name: ROLES.USER,

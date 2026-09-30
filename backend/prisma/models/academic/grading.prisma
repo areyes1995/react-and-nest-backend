@@ -1,0 +1,103 @@
+// ======================================================
+// CALIFICACIONES — registro oficial MINERD.
+// Estructura de la plantilla "récord de notas":
+//   4 bloques de competencias (PC1…PC4) × 4 periodos
+//   (P1…P4), cada uno con su recuperación (RP).
+//   C.F. = promedio de PC1…PC4; si C.F. < 70 aplica la
+//   calificación completiva, luego la extraordinaria y
+//   por último la especial.
+// ======================================================
+
+/// Nota de un bloque de competencias en un periodo (P) y su recuperación (RP).
+model CompetenceGrade {
+  id        Int     @id @default(autoincrement())
+  studentId Int
+  sectionId Int
+  period    Int // 1…4
+  block     Int // 1…4
+  score     Float? // P
+  recovery  Float? // RP
+  /// true cuando el docente fijó la nota a mano; false cuando se
+  /// calcula a partir de las actividades evaluadas del periodo.
+  isManual  Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sectionId, period, block])
+  @@index([sectionId])
+}
+
+/// Calificaciones de cierre de año (completiva, extraordinaria, especial).
+model FinalGrade {
+  id                 Int    @id @default(autoincrement())
+  studentId          Int
+  sectionId          Int
+  completiveScore    Float? // C.E.C.
+  extraordinaryScore Float? // C.E.EX
+  specialScore       Float? // C.E.
+
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sectionId])
+}
+
+/// Actividad evaluada: prueba, tarea, proyecto o entrega.
+model Assessment {
+  id               Int            @id @default(autoincrement())
+  sectionId        Int
+  teacherId        Int
+  title            String         @db.VarChar(150)
+  description      String?        @db.Text
+  type             EvaluationType @default(FORMATIVE)
+  period           Int
+  block            Int
+  fundamentalId    Int?
+  instrumentId     Int?
+  examId           Int?
+  date             DateTime       @db.Date
+  dueDate          DateTime?      @db.Date
+  maxScore         Float          @default(100)
+  weight           Float          @default(1)
+  /// true si requiere entrega del estudiante (tareas, proyectos).
+  requiresDelivery Boolean        @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  section     Section                @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  teacher     SystemUser             @relation("AssessmentTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  fundamental FundamentalCompetence? @relation(fields: [fundamentalId], references: [id], onDelete: SetNull)
+  instrument  EvaluationInstrument?  @relation(fields: [instrumentId], references: [id], onDelete: SetNull)
+  exam        Exam?                  @relation(fields: [examId], references: [id], onDelete: SetNull)
+  scores      AssessmentScore[]
+  evidences   Evidence[]
+  events      CalendarEvent[]
+
+  @@index([sectionId, period])
+  @@index([teacherId])
+}
+
+model AssessmentScore {
+  id             Int       @id @default(autoincrement())
+  assessmentId   Int
+  studentId      Int
+  score          Float?
+  delivered      Boolean   @default(false)
+  feedback       String?   @db.Text
+  /// Respuestas del instrumento (casillas de la lista de cotejo, niveles de rúbrica…).
+  instrumentData Json?
+  gradedAt       DateTime?
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, studentId])
+  @@index([studentId])
+}

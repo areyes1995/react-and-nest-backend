@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -21,6 +22,8 @@ import { AccountTokenService } from './account-token.service';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { RequestPasswordResetDto } from '../dto/request-password-reset.dto';
+import { SignupAuthDto, SignupResultDto } from '../dto/signup-auth.dto';
+import { ROLES } from '../constants/roles.constants';
 
 @Injectable()
 export class DefaultAuthService implements AuthService {
@@ -171,6 +174,57 @@ export class DefaultAuthService implements AuthService {
       phoneNumber: dto.phoneNumber ?? undefined,
       role: dto.role,
     });
+  }
+
+  /**
+   * Registro público de docentes. Crea la cuenta con rol DOCENTE y su
+   * perfil. Con SMTP configurado se exige validar el correo; en modo stub
+   * (desarrollo) la cuenta queda verificada e inicia sesión de inmediato.
+   */
+  async signup(dto: SignupAuthDto): Promise<SignupResultDto> {
+    const email = dto.email.trim().toLowerCase();
+    const exists = await this.prisma.systemUser.findFirst({ where: { email } });
+    if (exists) {
+      throw new ConflictException('Ya existe una cuenta con ese correo.');
+    }
+
+    const role = await this.prisma.role.findUnique({ where: { name: ROLES.DOCENTE } });
+    if (!role) {
+      throw new NotFoundException('El rol DOCENTE no existe. Ejecuta los seeders.');
+    }
+
+    const autoVerify = !this.mailerService.isConfigured();
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const user = await this.prisma.systemUser.create({
+      data: {
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        email,
+        passwordHash,
+        emailVerified: autoVerify,
+        mustChangePassword: false,
+        roles: { create: { roleId: role.id } },
+        teacherProfile: {
+          create: {
+            institution: dto.institution?.trim() || null,
+            specialty: dto.specialty?.trim() || 'Matemática',
+            displayTitle: 'Prof.',
+          },
+        },
+      },
+    });
+
+    if (!autoVerify) {
+      await this.sendVerifyEmail({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+      } as AuthUserDto);
+      return { requiresVerification: true };
+    }
+
+    const session = await this.login({ email, password: dto.password });
+    return { requiresVerification: false, session };
   }
 
   /**

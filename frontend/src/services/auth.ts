@@ -158,6 +158,30 @@ export async function requestPasswordReset(email: string): Promise<ApiResponse<v
   return post<void>('/auth/request-password-reset', { email })
 }
 
+// ─── Registro público de docentes ──
+
+export interface SignupData {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  institution?: string
+}
+
+export async function signup(data: SignupData): Promise<{ requiresVerification: boolean; session?: AuthResponse }> {
+  const res = await post<{ requiresVerification: boolean; session?: RawAuthResponse }>('/auth/signup', data)
+  if (!res.ok) {
+    throw new Error(res.error || 'No se pudo crear la cuenta')
+  }
+  const raw = res.data.session
+  return {
+    requiresVerification: res.data.requiresVerification,
+    session: raw
+      ? { token: raw.token, refreshToken: raw.refreshToken, expiresAt: raw.Expiration, user: mapRawUser(raw.User) }
+      : undefined,
+  }
+}
+
 export function getAuthMethodLabel(): string {
   return 'Base de Datos'
 }

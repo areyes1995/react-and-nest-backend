@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
-<rect width="1200" height="800" fill="#f4f0e8"/>
-
-<path d="M600 130 C 700 150, 820 170, 840 180 C 850 440, 760 580, 600 670 C 440 580, 350 440, 360 180 C 380 170, 500 150, 600 130 Z" fill="#2ec4a6" fill-opacity="0.15" stroke="#23201c" stroke-width="3"/><path d="M600 197.5 C 675 212.5, 765 227.5, 780 235 C 787.5 430, 720 535, 600 602.5 C 480 535, 412.5 430, 420 235 C 435 227.5, 525 212.5, 600 197.5 Z" fill="#2ec4a6" fill-opacity="0.4" stroke="#23201c" stroke-width="3"/><path d="M600 265 C 650 275, 710 285, 720 290 C 725 420, 680 490, 600 535 C 520 490, 475 420, 480 290 C 490 285, 550 275, 600 265 Z" fill="#2ec4a6" fill-opacity="0.65" stroke="#23201c" stroke-width="3"/><rect x="560" y="400" width="80" height="64" rx="10" fill="#23201c"/><path d="M575 400 v-24 a25 25 0 0 1 50 0 v24" stroke="#23201c" stroke-width="10" fill="none"/>
-<g font-family="Helvetica, Arial, sans-serif" fill="#23201c">
-<rect x="48" y="722" width="36" height="4" fill="#23201c" opacity="0.8"/>
-<text x="48" y="756" font-size="22" font-weight="600" letter-spacing="3" opacity="0.75">DEFENSA EN PROFUNDIDAD</text>
-</g>
-</svg>

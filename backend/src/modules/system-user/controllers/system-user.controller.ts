@@ -17,11 +17,12 @@ import { SystemUserService } from '../services/interfaces/system-user.service';
 import { Roles } from 'src/modules/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 import { ROLES } from 'src/modules/auth/constants/roles.constants';
-import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('System Users')
+@ApiBearerAuth()
 @Controller(['user', 'users'])
-// @UseGuards(JwtGuard)
+@UseGuards(JwtGuard, RolesGuard)
 export class SystemUserController {
   constructor(
     @Inject('SystemUserService')
@@ -55,6 +56,7 @@ export class SystemUserController {
   }
 
   @Get()
+  @Roles(ROLES.ADMIN)
   @ApiResponse({ status: 200, description: 'Returns a list of system users.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getUsers(@Query() query: UserQueryParameters) {

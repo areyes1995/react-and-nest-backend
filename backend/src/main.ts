@@ -12,7 +12,10 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-  // WebSocket nativo (ws) para la presencia multijugador del metaverso: /ws/presence
+  // Firmas digitales y fotos de perfil viajan como data URL.
+  app.useBodyParser('json', { limit: '5mb' });
+
+  // WebSocket nativo (ws).
   app.useWebSocketAdapter(new WsAdapter(app));
 
   app.useGlobalPipes(
@@ -23,8 +26,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('API')
-    .setDescription('API Documentation')
+    .setTitle('Educraft XYZ API')
+    .setDescription('Plataforma integral para docentes de Matemática (MINERD, Nivel Secundario)')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

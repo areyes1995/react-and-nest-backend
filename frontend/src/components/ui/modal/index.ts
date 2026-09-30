@@ -1,7 +1,0 @@
-export { default as Modal } from './Modal'
-export { default as ModalHeader } from './ModalHeader'
-export { default as ModalBody } from './ModalBody'
-export { default as ModalFooter } from './ModalFooter'
-export { default as ConfirmDeleteModal } from './ConfirmDeleteModal'
-export { default as EntityModalAction } from './EntityModalAction'
-export { default as FormModal, formInputClass } from './FormModal'

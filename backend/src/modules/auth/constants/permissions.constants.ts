@@ -7,6 +7,13 @@ export const RESOURCES = [
   { name: 'auth', description: 'Autenticación y sesiones' },
   { name: 'module', description: 'Visibilidad de módulos del frontend' },
   { name: 'custom-module', description: 'Módulos personalizados del usuario' },
+  { name: 'curriculum', description: 'Adecuación curricular (competencias, indicadores, contenidos)' },
+  { name: 'academic', description: 'Año escolar, secciones, estudiantes, asistencia y calificaciones' },
+  { name: 'planning', description: 'Programaciones, planes de clase, presentaciones y actividades' },
+  { name: 'evaluation', description: 'Banco de preguntas, exámenes, rúbricas y listas de cotejo' },
+  { name: 'library', description: 'Biblioteca de recursos del docente' },
+  { name: 'report', description: 'Reportes, boletines e informes para padres' },
+  { name: 'ai-pedagogy', description: 'Inteligencia artificial pedagógica' },
 ] as const;
 
 export type ResourceName = (typeof RESOURCES)[number]['name'];
@@ -112,6 +119,51 @@ export const PERMISSIONS = [
     name: 'custom-module:delete',
     resource: 'custom-module',
     description: 'Eliminar módulos personalizados',
+  },
+  {
+    name: 'curriculum:read',
+    resource: 'curriculum',
+    description: 'Consultar la adecuación curricular',
+  },
+  {
+    name: 'curriculum:manage',
+    resource: 'curriculum',
+    description: 'Editar el catálogo curricular',
+  },
+  {
+    name: 'academic:manage',
+    resource: 'academic',
+    description: 'Gestionar año escolar, secciones, estudiantes, asistencia y notas',
+  },
+  {
+    name: 'planning:manage',
+    resource: 'planning',
+    description: 'Gestionar planificación, clases y presentaciones',
+  },
+  {
+    name: 'evaluation:manage',
+    resource: 'evaluation',
+    description: 'Gestionar evaluaciones e instrumentos',
+  },
+  {
+    name: 'library:manage',
+    resource: 'library',
+    description: 'Gestionar la biblioteca de recursos',
+  },
+  {
+    name: 'report:manage',
+    resource: 'report',
+    description: 'Generar reportes, boletines e informes para padres',
+  },
+  {
+    name: 'ai-pedagogy:use',
+    resource: 'ai-pedagogy',
+    description: 'Usar los generadores y el tutor de IA',
+  },
+  {
+    name: 'module:educraft',
+    resource: 'module',
+    description: 'Ver el espacio docente de Educraft',
   },
 ] as const satisfies ReadonlyArray<{
   name: string;

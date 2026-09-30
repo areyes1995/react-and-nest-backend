@@ -1,8 +1,8 @@
 {
-  "name": "starter-monorepo",
+  "name": "educraft-xyz",
   "private": true,
   "version": "1.0.0",
-  "description": "Starter monorepo \u2014 backend (NestJS) + frontend (Vite): auth, RBAC, IA, RAG, Redis",
+  "description": "Educraft XYZ — plataforma integral para docentes de Matemática (NestJS + React/Vite + PostgreSQL)",
   "packageManager": "pnpm@10.2.0",
   "workspaces": [
     "backend",
@@ -15,12 +15,13 @@
     "build": "pnpm -r build",
     "build:backend": "pnpm --filter starter-backend run build",
     "build:frontend": "pnpm --filter @starter/frontend run build",
-    "start": "pnpm --filter uapaverse-backend run start:prod",
-    "start:prod": "pnpm --filter uapaverse-backend run start:prod",
+    "start": "pnpm --filter starter-backend run start:prod",
+    "start:prod": "pnpm --filter starter-backend run start:prod",
     "test": "pnpm -r test",
     "lint": "pnpm --filter starter-backend run lint",
     "db:migrate": "pnpm --filter starter-backend run db:migrate",
-    "db:seed": "pnpm --filter starter-backend run db:seed"
+    "db:seed": "pnpm --filter starter-backend run db:seed",
+    "db:seed:demo": "SEED_DEMO=true pnpm --filter starter-backend run db:seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

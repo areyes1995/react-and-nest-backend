@@ -14,12 +14,12 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-const THEME_KEY = 'modu_theme'
+const THEME_KEY = 'educraft_theme'
 
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem(THEME_KEY) as Theme | null
   if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
-  return 'dark'
+  return 'light'
 }
 
 function resolveTheme(theme: Theme): 'light' | 'dark' {

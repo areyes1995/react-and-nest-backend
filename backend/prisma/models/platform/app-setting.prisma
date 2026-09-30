@@ -6,7 +6,9 @@
 // ======================================================
 
 model AppSetting {
-  /** Identificador del ajuste, p.ej. `poker.tableTheme`. */
+  /**
+   * Identificador del ajuste, p.ej. `poker.tableTheme`.
+   */
   key String @id @db.VarChar(120)
 
   value Json

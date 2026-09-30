@@ -1,19 +1,25 @@
 // ──────────────────────────────────────────────
-// App — Application root (starter base)
+// Educraft XYZ — raíz de la aplicación
 // ──────────────────────────────────────────────
 
+import { Suspense } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '@context/AuthContext'
 import { ThemeProvider } from '@context/ThemeContext'
-import { router } from '@routes'
-import './i18n'
+import { FeedbackProvider } from '@context/ToastContext'
+import { Spinner } from '@components/ui'
+import { router } from './routes'
 
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <FeedbackProvider>
+        <AuthProvider>
+          <Suspense fallback={<Spinner label="Cargando…" />}>
+            <RouterProvider router={router} />
+          </Suspense>
+        </AuthProvider>
+      </FeedbackProvider>
     </ThemeProvider>
   )
 }

@@ -21,7 +21,7 @@ export class MailerService {
 
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {
     this.from =
-      this.config.get<string>('MAIL_FROM') || 'Uapaverse <no-reply@uapaverse.edu>';
+      this.config.get<string>('MAIL_FROM') || 'Educraft XYZ <no-reply@educraft.app>';
     this.frontendUrl =
       this.config.get<string>('FRONTEND_URL') || 'http://localhost:5173';
 
@@ -59,6 +59,11 @@ export class MailerService {
       html = html.split(`{{${key}}}`).join(value);
     }
     return html;
+  }
+
+  /** true si hay SMTP real; false en modo stub (correos a consola). */
+  isConfigured(): boolean {
+    return Boolean(this.transport);
   }
 
   getFrontendUrl(path = ''): string {

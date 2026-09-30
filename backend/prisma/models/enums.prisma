@@ -23,6 +23,18 @@ enum AiAnalysisType {
   VALIDATION_REQUEST_ITEM
   PENSUM_IMPORT
   STUDENT_SUBJECT_IMPORT
+  LESSON_PLAN
+  CURRICULAR_PROGRAM
+  PRESENTATION
+  PROBLEM_SET
+  STEP_BY_STEP
+  RUBRIC
+  CHECKLIST
+  EXAM
+  ACTIVITY
+  OBSERVATION
+  STRATEGY
+  TUTOR
 }
 
 enum AiRecommendation {
@@ -36,4 +48,108 @@ enum AiAnalysisStatus {
   RUNNING
   COMPLETED
   FAILED
+}
+
+// ── Educraft — dominio académico ─────────────────────
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+enum EvaluationType {
+  DIAGNOSTIC
+  FORMATIVE
+  SUMMATIVE
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  DEVELOPMENT
+  MATCHING
+  COMPLETE
+  GRAPH
+  PROBLEM
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum InstrumentType {
+  RUBRIC
+  CHECKLIST
+  RATING_SCALE
+}
+
+enum ObservationType {
+  CONDUCT
+  PARTICIPATION
+  SITUATION
+}
+
+enum CalendarEventType {
+  CLASS
+  EXAM
+  MEETING
+  DELIVERY
+  INSTITUTIONAL
+  CIVIC
+  VACATION
+  HOLIDAY
+  REMINDER
+}
+
+enum ResourceCategory {
+  IMAGE
+  ICON
+  ILLUSTRATION
+  CHART
+  GEOMETRY
+  TEMPLATE
+  BACKGROUND
+  VIDEO
+  ANIMATION
+  PDF
+  OWN
+}
+
+enum ContentKind {
+  CONCEPT
+  PROCEDURE
+  ATTITUDE
+}
+
+enum LessonPlanStatus {
+  DRAFT
+  READY
+  TAUGHT
+}
+
+enum UnitKind {
+  ANNUAL_PROGRAM
+  UNIT
+  LEARNING_EXPERIENCE
+  PROJECT
+}
+
+enum ActivityType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  MATCHING
+  COMPLETE
+  ORDER_STEPS
+  DRAG_DROP
+  SOLVE_OPERATIONS
+  CARTESIAN_POINTS
+  ROULETTE
+  MEMORY
+  ESCAPE_ROOM
+  QUIZ_GAME
 }

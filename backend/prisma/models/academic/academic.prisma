@@ -1,0 +1,126 @@
+// ======================================================
+// GESTIÓN ACADÉMICA — perfil docente, año escolar,
+// periodos, feriados, secciones y horario.
+// Todo registro pertenece a un docente (`teacherId`):
+// cada docente solo ve y edita lo suyo.
+// ======================================================
+
+model TeacherProfile {
+  id     Int @id @default(autoincrement())
+  userId Int @unique
+
+  displayTitle String? @db.VarChar(20) // "Prof.", "Lic.", "Mtra."
+  specialty    String  @default("Matemática") @db.VarChar(80)
+  institution  String? @db.VarChar(150)
+  district     String? @db.VarChar(80)
+  avatarUrl    String? @db.Text
+  /// Firma digital (data URL PNG) usada en boletines y planificaciones.
+  signature    String? @db.Text
+  bio          String? @db.Text
+
+  googleCalendarSync Boolean @default(false)
+  /// Preferencias de interfaz (tema, vista por defecto, etc.).
+  preferences        Json    @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user SystemUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SchoolYear {
+  id        Int      @id @default(autoincrement())
+  teacherId Int
+  name      String   @db.VarChar(40) // "2025-2026"
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isActive  Boolean  @default(true)
+
+  /// Semanas lectivas planificadas.
+  teachingWeeks Int?
+  /// Escala de calificación: { type: "NUMERIC_100" | "NUMERIC_1_5" | "LITERAL", passing: 70 }.
+  gradingScale  Json @default("{\"type\":\"NUMERIC_100\",\"passing\":70}")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher  SystemUser       @relation("SchoolYearTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  periods  AcademicPeriod[]
+  holidays Holiday[]
+  sections Section[]
+  units    LearningUnit[]
+
+  @@index([teacherId, isActive])
+}
+
+/// Periodo de evaluación (P1…P4 en el registro oficial).
+model AcademicPeriod {
+  id           Int      @id @default(autoincrement())
+  schoolYearId Int
+  number       Int
+  name         String   @db.VarChar(40)
+  startDate    DateTime @db.Date
+  endDate      DateTime @db.Date
+
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolYearId, number])
+}
+
+model Holiday {
+  id           Int      @id @default(autoincrement())
+  schoolYearId Int
+  name         String   @db.VarChar(120)
+  date         DateTime @db.Date
+  isNational   Boolean  @default(true)
+
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+
+  @@index([schoolYearId, date])
+}
+
+/// Curso-sección a cargo del docente (p.ej. 3° Secundaria A).
+model Section {
+  id           Int     @id @default(autoincrement())
+  teacherId    Int
+  schoolYearId Int
+  gradeId      Int
+  name         String  @db.VarChar(20) // "A", "B"
+  subject      String  @default("Matemática") @db.VarChar(80)
+  color        String  @default("#ec4899") @db.VarChar(9)
+  room         String? @db.VarChar(40)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher          SystemUser        @relation("SectionTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  schoolYear       SchoolYear        @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  grade            CurriculumGrade   @relation(fields: [gradeId], references: [id])
+  schedules        ClassSchedule[]
+  students         Student[]
+  attendances      Attendance[]
+  competenceGrades CompetenceGrade[]
+  finalGrades      FinalGrade[]
+  assessments      Assessment[]
+  units            LearningUnit[]
+  lessonPlans      LessonPlan[]
+  events           CalendarEvent[]
+
+  @@index([teacherId, schoolYearId])
+}
+
+/// Bloque semanal del horario de una sección.
+model ClassSchedule {
+  id        Int     @id @default(autoincrement())
+  sectionId Int
+  weekday   Int // 1 = lunes … 7 = domingo
+  startTime String  @db.VarChar(5) // "08:00"
+  endTime   String  @db.VarChar(5) // "09:30"
+  topic     String? @db.VarChar(150)
+
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, weekday])
+}

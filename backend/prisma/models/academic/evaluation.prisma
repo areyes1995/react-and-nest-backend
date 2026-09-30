@@ -1,0 +1,104 @@
+// ======================================================
+// EVALUACIÓN — banco de preguntas, exámenes e
+// instrumentos (rúbricas, listas de cotejo, escalas).
+// ======================================================
+
+model Question {
+  id            Int          @id @default(autoincrement())
+  teacherId     Int
+  gradeId       Int?
+  fundamentalId Int?
+  topic         String       @db.VarChar(200)
+  type          QuestionType
+  difficulty    Difficulty   @default(MEDIUM)
+  statement     String       @db.Text
+  /// Opciones (selección múltiple) o pares (relacionar).
+  options       Json?
+  /// Respuesta correcta: índice, booleano, texto o pares.
+  answer        Json?
+  solution      String?      @db.Text
+  points        Float        @default(1)
+  tags          String[]
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher     SystemUser             @relation("QuestionTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  grade       CurriculumGrade?       @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  fundamental FundamentalCompetence? @relation(fields: [fundamentalId], references: [id], onDelete: SetNull)
+  exams       ExamQuestion[]
+
+  @@index([teacherId, topic])
+  @@index([teacherId, type])
+}
+
+model Exam {
+  id              Int            @id @default(autoincrement())
+  teacherId       Int
+  gradeId         Int?
+  fundamentalId   Int?
+  title           String         @db.VarChar(200)
+  evaluationType  EvaluationType @default(SUMMATIVE)
+  instructions    String?        @db.Text
+  durationMinutes Int?
+  versions        Int            @default(1)
+  shuffle         Boolean        @default(false)
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher     SystemUser             @relation("ExamTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  grade       CurriculumGrade?       @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  fundamental FundamentalCompetence? @relation(fields: [fundamentalId], references: [id], onDelete: SetNull)
+  questions   ExamQuestion[]
+  assessments Assessment[]
+
+  @@index([teacherId])
+}
+
+model ExamQuestion {
+  examId     Int
+  questionId Int
+  order      Int
+  points     Float?
+
+  exam     Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([examId, questionId])
+}
+
+/// Rúbrica, lista de cotejo o escala de valoración.
+/// `content` según el tipo:
+///   RUBRIC       → { levels: ["Excelente","Logrado","En proceso","Inicio"], criteria: [{ criterion, weight, descriptors: [..4] }] }
+///   CHECKLIST    → { items: [{ text }] }
+///   RATING_SCALE → { scale: "1-4" | "1-5" | "AD-A-B-C", levels: [{ value, label }], items: [{ text }] }
+model EvaluationInstrument {
+  id            Int            @id @default(autoincrement())
+  teacherId     Int
+  type          InstrumentType
+  title         String         @db.VarChar(200)
+  description   String?        @db.Text
+  gradeId       Int?
+  fundamentalId Int?
+  content       Json
+
+  aiGenerated Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  teacher     SystemUser             @relation("InstrumentTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  grade       CurriculumGrade?       @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  fundamental FundamentalCompetence? @relation(fields: [fundamentalId], references: [id], onDelete: SetNull)
+  assessments Assessment[]
+
+  @@index([teacherId, type])
+}

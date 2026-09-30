@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
-<rect width="1200" height="800" fill="#f4f0e8"/>
-
-<circle cx="210" cy="380" r="95" fill="#e0a458" fill-opacity="0.18" stroke="#23201c" stroke-width="3"/><text x="210" y="390" text-anchor="middle" font-family="Helvetica" font-size="26" fill="#23201c">Recolectar</text><path d="M310 380 l60 0 m-14 -12 l14 12 l-14 12" stroke="#23201c" stroke-width="4" fill="none"/><circle cx="470" cy="380" r="95" fill="#e0a458" fill-opacity="0.36" stroke="#23201c" stroke-width="3"/><text x="470" y="390" text-anchor="middle" font-family="Helvetica" font-size="26" fill="#23201c">Triturar</text><path d="M570 380 l60 0 m-14 -12 l14 12 l-14 12" stroke="#23201c" stroke-width="4" fill="none"/><circle cx="730" cy="380" r="95" fill="#e0a458" fill-opacity="0.54" stroke="#23201c" stroke-width="3"/><text x="730" y="390" text-anchor="middle" font-family="Helvetica" font-size="26" fill="#23201c">Prensar</text><path d="M830 380 l60 0 m-14 -12 l14 12 l-14 12" stroke="#23201c" stroke-width="4" fill="none"/><circle cx="990" cy="380" r="95" fill="#e0a458" fill-opacity="0.72" stroke="#23201c" stroke-width="3"/><text x="990" y="390" text-anchor="middle" font-family="Helvetica" font-size="26" fill="#23201c">Cortar</text>
-<g font-family="Helvetica, Arial, sans-serif" fill="#23201c">
-<rect x="48" y="722" width="36" height="4" fill="#23201c" opacity="0.8"/>
-<text x="48" y="756" font-size="22" font-weight="600" letter-spacing="3" opacity="0.75">DE TAPAS A LÁMINAS</text>
-</g>
-</svg>

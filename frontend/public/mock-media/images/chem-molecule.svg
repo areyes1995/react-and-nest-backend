@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
-<rect width="1200" height="800" fill="#f4f0e8"/>
-
-<line x1="600" y1="400" x2="780" y2="300" stroke="#23201c" stroke-width="12" stroke-opacity="0.35"/><line x1="600" y1="400" x2="430" y2="290" stroke="#23201c" stroke-width="12" stroke-opacity="0.35"/><line x1="600" y1="400" x2="610" y2="590" stroke="#23201c" stroke-width="12" stroke-opacity="0.35"/><line x1="780" y1="300" x2="860" y2="480" stroke="#23201c" stroke-width="12" stroke-opacity="0.35"/><line x1="430" y1="290" x2="330" y2="470" stroke="#23201c" stroke-width="12" stroke-opacity="0.35"/><line x1="610" y1="590" x2="760" y2="650" stroke="#23201c" stroke-width="12" stroke-opacity="0.35"/><circle cx="600" cy="400" r="60" fill="#62b85c" stroke="#23201c" stroke-width="3"/><circle cx="780" cy="300" r="44" fill="#23201c" stroke="#23201c" stroke-width="3"/><circle cx="430" cy="290" r="44" fill="#23201c" stroke="#23201c" stroke-width="3"/><circle cx="610" cy="590" r="50" fill="#e06a5a" stroke="#23201c" stroke-width="3"/><circle cx="860" cy="480" r="34" fill="#ddd" stroke="#23201c" stroke-width="3"/><circle cx="330" cy="470" r="34" fill="#ddd" stroke="#23201c" stroke-width="3"/><circle cx="760" cy="650" r="30" fill="#ddd" stroke="#23201c" stroke-width="3"/>
-<g font-family="Helvetica, Arial, sans-serif" fill="#23201c">
-<rect x="48" y="722" width="36" height="4" fill="#23201c" opacity="0.8"/>
-<text x="48" y="756" font-size="22" font-weight="600" letter-spacing="3" opacity="0.75">PECTINA + GLICEROL</text>
-</g>
-</svg>
