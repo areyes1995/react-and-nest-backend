@@ -1,0 +1,169 @@
+// ======================================================
+// TRADING RISK MANAGER — perfil de riesgo, diario,
+// cuentas de fondeo, ingresos, distribuciones y retiros.
+// ------------------------------------------------------
+// Todos los registros pertenecen a un `SystemUser` y se
+// consultan siempre filtrando por `userId`.
+// Montos en DOUBLE PRECISION: herramienta de planificación,
+// los resultados se redondean a centavos en la capa de servicio.
+// ======================================================
+
+// Reglas personales del trader (una fila por usuario).
+model TradingProfile {
+  id Int @id @default(autoincrement())
+
+  userId Int        @unique
+  user   SystemUser @relation(fields: [userId], references: [id])
+
+  baseCurrency   String @default("USD") @db.VarChar(10)
+  initialCapital Float  @default(10000)
+
+  riskPerTradePct     Float @default(0.5)
+  defaultRewardRatio  Float @default(2)
+  maxTradesPerDay     Int   @default(3)
+  maxDailyLossPct     Float @default(2)
+  maxWeeklyLossPct    Float @default(5)
+  maxDrawdownPct      Float @default(10)
+  maxConsecutiveLosses Int  @default(2)
+
+  // Umbral (% del límite consumido) a partir del cual la alerta pasa a RIESGO.
+  warningThresholdPct Float @default(75)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Cuenta/challenge de una empresa de fondeo.
+model FundingAccount {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id])
+
+  firmName    String @db.VarChar(100)
+  label       String? @db.VarChar(100)
+  accountSize Float
+  phase       FundingPhase  @default(CHALLENGE)
+  status      FundingStatus @default(ACTIVE)
+
+  profitTargetPct Float
+  dailyLossPct    Float
+  maxDrawdownPct  Float
+  drawdownType    DrawdownType @default(STATIC)
+  minTradingDays  Int          @default(0)
+  targetDays      Int          @default(10)
+  riskPerTradePct Float        @default(0.5)
+  rewardRatio     Float        @default(2)
+
+  startDate DateTime  @default(now()) @db.Date
+  notes     String?   @db.Text
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  trades  TradeEntry[]
+  payouts Payout[]
+
+  @@index([userId, status])
+}
+
+// Diario del trader: una operación.
+model TradeEntry {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id])
+
+  // null → cuenta personal (capital del TradingProfile).
+  fundingAccountId Int?
+  fundingAccount   FundingAccount? @relation(fields: [fundingAccountId], references: [id])
+
+  asset     String         @db.VarChar(30)
+  direction TradeDirection
+  tradeDate DateTime
+  session   TradingSession?
+  setup     String?        @db.VarChar(100)
+
+  entryPrice      Float?
+  stopLoss        Float?
+  takeProfit      Float?
+  positionSize    Float?
+  riskPct         Float?
+  riskAmount      Float?
+  resultAmount    Float
+  resultR         Float?
+
+  screenshotUrl String? @db.VarChar(500)
+
+  followedPlan  Boolean @default(true)
+  impulsive     Boolean @default(false)
+  movedStopLoss Boolean @default(false)
+  closedEarly   Boolean @default(false)
+  emotion       TradeEmotion?
+  comment       String? @db.Text
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId, tradeDate])
+  @@index([fundingAccountId])
+}
+
+// Ingreso mensual por fuente.
+model IncomeEntry {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id])
+
+  source IncomeSource
+  amount Float
+  // Primer día del mes al que corresponde.
+  period DateTime     @db.Date
+  note   String?      @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, period])
+}
+
+// Plan de distribución configurable (uno por tipo y usuario).
+// `buckets`: [{ key, label, percent }] — los porcentajes suman 100.
+model DistributionPlan {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id])
+
+  kind    DistributionKind
+  buckets Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, kind])
+}
+
+// Payout recibido y cómo se distribuyó (snapshot).
+model Payout {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   SystemUser @relation(fields: [userId], references: [id])
+
+  fundingAccountId Int?
+  fundingAccount   FundingAccount? @relation(fields: [fundingAccountId], references: [id])
+
+  amount     Float
+  receivedAt DateTime @db.Date
+  // [{ key, label, percent, amount }]
+  allocation Json
+  note       String?  @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, receivedAt])
+}

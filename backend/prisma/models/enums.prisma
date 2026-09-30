@@ -37,3 +37,60 @@ enum AiAnalysisStatus {
   COMPLETED
   FAILED
 }
+
+// ── Trading Risk Manager ─────────────────────────────
+
+enum TradeDirection {
+  LONG
+  SHORT
+}
+
+enum TradingSession {
+  ASIA
+  LONDON
+  NEW_YORK
+  OVERLAP
+  OTHER
+}
+
+enum TradeEmotion {
+  CALM
+  CONFIDENT
+  ANXIOUS
+  FEARFUL
+  GREEDY
+  FRUSTRATED
+  EUPHORIC
+  BORED
+}
+
+enum FundingPhase {
+  CHALLENGE
+  VERIFICATION
+  FUNDED
+}
+
+enum FundingStatus {
+  ACTIVE
+  PASSED
+  FAILED
+  PAUSED
+}
+
+enum DrawdownType {
+  STATIC
+  TRAILING
+}
+
+enum IncomeSource {
+  TRADING
+  FUNDING
+  SALARY
+  BUSINESS
+  OTHER
+}
+
+enum DistributionKind {
+  INCOME
+  PAYOUT
+}

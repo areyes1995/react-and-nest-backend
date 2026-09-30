@@ -14,6 +14,16 @@ import {
   ScrollText,
   Cpu,
   Database,
+  Gauge,
+  Calculator,
+  BookOpen,
+  BarChart3,
+  Trophy,
+  Target,
+  Wallet,
+  Coins,
+  LineChart,
+  Settings2,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -35,6 +45,13 @@ const iconClass = 'w-4 h-4'
 
 export const PRIMARY_NAV: NavItem[] = [
   {
+    label: 'nav.trading',
+    path: '/app/trading',
+    slug: 'trading',
+    description: 'nav.desc.trading',
+    icon: <Gauge className={iconClass} strokeWidth={1.5} />,
+  },
+  {
     label: 'nav.home',
     path: '/app/home',
     slug: 'home',
@@ -44,6 +61,84 @@ export const PRIMARY_NAV: NavItem[] = [
 ]
 
 export const NAV_SECTIONS: NavSection[] = [
+  {
+    title: 'nav.section.trading',
+    items: [
+      {
+        label: 'nav.tradingRisk',
+        path: '/app/trading/risk',
+        slug: 'trading-risk',
+        description: 'nav.desc.tradingRisk',
+        icon: <Calculator className={iconClass} strokeWidth={1.5} />,
+      },
+      {
+        label: 'nav.tradingJournal',
+        path: '/app/trading/journal',
+        slug: 'trading-journal',
+        description: 'nav.desc.tradingJournal',
+        icon: <BookOpen className={iconClass} strokeWidth={1.5} />,
+      },
+      {
+        label: 'nav.tradingStats',
+        path: '/app/trading/stats',
+        slug: 'trading-stats',
+        description: 'nav.desc.tradingStats',
+        icon: <BarChart3 className={iconClass} strokeWidth={1.5} />,
+      },
+    ],
+  },
+  {
+    title: 'nav.section.funding',
+    items: [
+      {
+        label: 'nav.tradingFunding',
+        path: '/app/trading/funding',
+        slug: 'trading-funding',
+        description: 'nav.desc.tradingFunding',
+        icon: <Trophy className={iconClass} strokeWidth={1.5} />,
+      },
+      {
+        label: 'nav.tradingChallenge',
+        path: '/app/trading/challenge',
+        slug: 'trading-challenge',
+        description: 'nav.desc.tradingChallenge',
+        icon: <Target className={iconClass} strokeWidth={1.5} />,
+      },
+    ],
+  },
+  {
+    title: 'nav.section.finance',
+    items: [
+      {
+        label: 'nav.tradingFinance',
+        path: '/app/trading/finance',
+        slug: 'trading-finance',
+        description: 'nav.desc.tradingFinance',
+        icon: <Wallet className={iconClass} strokeWidth={1.5} />,
+      },
+      {
+        label: 'nav.tradingPayouts',
+        path: '/app/trading/payouts',
+        slug: 'trading-payouts',
+        description: 'nav.desc.tradingPayouts',
+        icon: <Coins className={iconClass} strokeWidth={1.5} />,
+      },
+      {
+        label: 'nav.tradingGrowth',
+        path: '/app/trading/growth',
+        slug: 'trading-growth',
+        description: 'nav.desc.tradingGrowth',
+        icon: <LineChart className={iconClass} strokeWidth={1.5} />,
+      },
+      {
+        label: 'nav.tradingSettings',
+        path: '/app/trading/settings',
+        slug: 'trading-settings',
+        description: 'nav.desc.tradingSettings',
+        icon: <Settings2 className={iconClass} strokeWidth={1.5} />,
+      },
+    ],
+  },
   {
     title: 'nav.section.manage',
     items: [

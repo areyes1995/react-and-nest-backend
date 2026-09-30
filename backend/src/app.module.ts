@@ -13,6 +13,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { RagModule } from './modules/rag/rag.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { TradingModule } from './modules/trading/trading.module';
 
 import { PrismaModule } from 'prisma/prisma.module';
 import { HealthController } from './health.controller';
@@ -68,6 +69,7 @@ const bullConfig = {
     MailerModule,
     RagModule,
     RbacModule,
+    TradingModule,
   ],
   providers: [LoggerService],
   exports: [LoggerService],

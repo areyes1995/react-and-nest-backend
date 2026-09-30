@@ -27,6 +27,14 @@ model SystemUser {
   createdAuthLogs AuthLog[]        @relation("AuthLogCreatedBy")
   roles           SystemUserRole[]
 
+  // Trading Risk Manager.
+  tradingProfile    TradingProfile?
+  fundingAccounts   FundingAccount[]
+  tradeEntries      TradeEntry[]
+  incomeEntries     IncomeEntry[]
+  distributionPlans DistributionPlan[]
+  payouts           Payout[]
+
   // Ajustes globales.
   appSettings AppSetting[] @relation("AppSettingUpdatedBy")
 

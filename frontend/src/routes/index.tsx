@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────────
 // Router — tabla de rutas del starter base.
-// Solo: login, recuperación, dashboard, usuarios,
-// roles, permisos, notificaciones, IA, RAG y logs.
+// Login, recuperación, Trading Risk Manager (/app/trading/*),
+// usuarios, roles, permisos, notificaciones, IA, RAG y logs.
 // ──────────────────────────────────────────────
 
 import { lazy, Suspense } from 'react'
@@ -22,6 +22,16 @@ const RbacPermissionsView = lazy(() => import('@components/records/RbacPermissio
 const AiPage = lazy(() => import('@pages/dashboard/ai/AiPage'))
 const RagPage = lazy(() => import('@pages/dashboard/rag/RagPage'))
 const LogsPage = lazy(() => import('@pages/dashboard/logs/LogsPage'))
+const TradingDashboard = lazy(() => import('@pages/dashboard/trading/TradingDashboard'))
+const RiskCalculatorPage = lazy(() => import('@pages/dashboard/trading/RiskCalculatorPage'))
+const JournalPage = lazy(() => import('@pages/dashboard/trading/JournalPage'))
+const StatsPage = lazy(() => import('@pages/dashboard/trading/StatsPage'))
+const FundingAccountsPage = lazy(() => import('@pages/dashboard/trading/FundingAccountsPage'))
+const ChallengePlannerPage = lazy(() => import('@pages/dashboard/trading/ChallengePlannerPage'))
+const FinancePage = lazy(() => import('@pages/dashboard/trading/FinancePage'))
+const PayoutsPage = lazy(() => import('@pages/dashboard/trading/PayoutsPage'))
+const GrowthPage = lazy(() => import('@pages/dashboard/trading/GrowthPage'))
+const TradingSettingsPage = lazy(() => import('@pages/dashboard/trading/TradingSettingsPage'))
 
 function Lazy({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>
@@ -30,7 +40,7 @@ function Lazy({ children }: { children: React.ReactNode }) {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/app/home" replace />,
+    element: <Navigate to="/app/trading" replace />,
   },
   {
     path: '/login',
@@ -51,8 +61,19 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="/app/home" replace /> },
+      { index: true, element: <Navigate to="/app/trading" replace /> },
       { path: 'home', element: <Lazy><DashboardHome /></Lazy> },
+      // Trading Risk Manager
+      { path: 'trading', element: <Lazy><TradingDashboard /></Lazy> },
+      { path: 'trading/risk', element: <Lazy><RiskCalculatorPage /></Lazy> },
+      { path: 'trading/journal', element: <Lazy><JournalPage /></Lazy> },
+      { path: 'trading/stats', element: <Lazy><StatsPage /></Lazy> },
+      { path: 'trading/funding', element: <Lazy><FundingAccountsPage /></Lazy> },
+      { path: 'trading/challenge', element: <Lazy><ChallengePlannerPage /></Lazy> },
+      { path: 'trading/finance', element: <Lazy><FinancePage /></Lazy> },
+      { path: 'trading/payouts', element: <Lazy><PayoutsPage /></Lazy> },
+      { path: 'trading/growth', element: <Lazy><GrowthPage /></Lazy> },
+      { path: 'trading/settings', element: <Lazy><TradingSettingsPage /></Lazy> },
       {
         path: 'users',
         element: (
