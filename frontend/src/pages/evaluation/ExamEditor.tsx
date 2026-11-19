@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, FileDown, Key, Plus, Printer, Save, Search, Trash2 } from 'lucide-react'
 import { evaluationApi } from '@services/educraft'
-import type { EvaluationType, Exam, ExamVersions, Question } from '@services/types'
+import { get } from '@services/api'
+import type { EvaluationType, Exam, ExamVersions, Question, QuestionType } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
 import { useGrades } from '@hooks/useCatalog'
 import { useDebounce } from '@hooks/useDebounce'
@@ -13,6 +14,19 @@ import { slugify } from '@lib/format'
 import { formatAnswer } from './QuestionBankTab'
 
 type Item = { question: Question; points: number | null }
+
+type StudentExamView = {
+  title: string
+  instructions: string | null
+  durationMinutes: number | null
+  totalPoints: number
+  questions: Array<{ number: number; type: QuestionType; statement: string; options?: string[]; points: number }>
+}
+
+type AnswerKeyView = {
+  title: string
+  questions: Array<{ number: number; formatted: string; solution: string | null }>
+}
 
 function versionHtml(exam: ExamVersions['exam'], v: ExamVersions['versions'][number], withKey: boolean) {
   const qs = v.questions
@@ -50,6 +64,8 @@ export default function ExamEditor() {
   const [gradeVersion, setGradeVersion] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [gradeResult, setGradeResult] = useState<{ score: number; objectivePoints: number; totalPoints: number } | null>(null)
+  const [safeView, setSafeView] = useState<'student' | 'key' | null>(null)
+  const [safeData, setSafeData] = useState<StudentExamView | AnswerKeyView | null>(null)
   const term = useDebounce(pickQ, 250)
 
   const load = () =>
@@ -68,6 +84,18 @@ export default function ExamEditor() {
   useEffect(() => {
     if (tab === 'versions' && exam) evaluationApi.versions(id, exam.versions).then(setVersions).catch(() => setVersions(null))
   }, [tab, exam, id])
+
+  useEffect(() => {
+    if (!safeView) return
+    setSafeData(null)
+    const path = safeView === 'student' ? `/exams/${id}/student` : `/exams/${id}/answer-key`
+    get(path)
+      .then((res) => {
+        if (!res.ok) throw new Error(res.error || 'No se pudo cargar la vista')
+        setSafeData(res.data as StudentExamView | AnswerKeyView)
+      })
+      .catch((err) => error('No se pudo cargar la vista', (err as Error).message))
+  }, [safeView, id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!exam) return <Spinner />
 
@@ -119,6 +147,12 @@ export default function ExamEditor() {
               { key: 'versions', label: 'Versiones y clave' },
             ]}
           />
+          <Button variant="secondary" size="sm" onClick={() => setSafeView('student')}>
+            Vista estudiante
+          </Button>
+          <Button variant="secondary" size="sm" icon={<Key className="h-3.5 w-3.5" />} onClick={() => setSafeView('key')}>
+            Clave docente
+          </Button>
           <Button variant="secondary" size="sm" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => setGrading(true)}>
             Corrección automática
           </Button>
@@ -340,6 +374,39 @@ export default function ExamEditor() {
               </p>
             )}
           </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!safeView}
+        onClose={() => setSafeView(null)}
+        size="lg"
+        title={safeView === 'student' ? 'Vista del estudiante' : 'Clave de respuestas (docente)'}
+        subtitle={safeView === 'student' ? 'Sin respuestas ni soluciones: segura antes de publicar' : 'Uso exclusivo del docente'}
+      >
+        {!safeData ? (
+          <Spinner />
+        ) : safeView === 'student' ? (
+          <div className="space-y-3">
+            <p className="font-bold text-ink">{(safeData as StudentExamView).title}</p>
+            {(safeData as StudentExamView).questions.map((q) => (
+              <div key={q.number} className="rounded-2xl border border-line p-3 text-sm">
+                <p className="text-ink"><b>{q.number}.</b> <RichMath text={q.statement} /> <span className="text-ink-3">({q.points} pts)</span></p>
+                {Array.isArray(q.options) && (
+                  <ol className="mt-1 list-[lower-alpha] pl-5 text-xs text-ink-2">{q.options.map((o, i) => <li key={i}>{o}</li>)}</ol>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ol className="space-y-2 text-sm">
+            {(safeData as AnswerKeyView).questions.map((q) => (
+              <li key={q.number} className="rounded-xl bg-surface-2 px-3 py-2">
+                <b>{q.number}.</b> {q.formatted}
+                {q.solution && <span className="block text-xs text-ink-3">{q.solution}</span>}
+              </li>
+            ))}
+          </ol>
         )}
       </Modal>
     </div>

@@ -106,11 +106,33 @@ export async function seedDemo(prisma: PrismaClient): Promise<void> {
     year.periods.find((p) => p.startDate <= today && p.endDate >= today)?.number ??
     (today > end ? 4 : 1);
 
+  // Los temas se toman de los contenidos ya sembrados para cada grado, de
+  // modo que ninguna sección quede con un tema de otro nivel.
+  const contentsByGrade = new Map<string, string[]>();
+  for (const [code, grade] of grades) {
+    const rows = await prisma.curriculumContent.findMany({
+      where: { gradeId: grade.id },
+      select: { description: true },
+    });
+    contentsByGrade.set(code, rows.map((row) => row.description));
+  }
+  const TOPIC_HINT: Record<string, string> = {
+    'SEC-3': 'Factorización de polinomios',
+    'SEC-2': 'Ecuaciones e inecuaciones de primer grado',
+    'SEC-5': 'Ley de los senos y cosenos',
+  };
+  const topicFor = (code: string) => {
+    const hint = TOPIC_HINT[code];
+    const contents = contentsByGrade.get(code) ?? [];
+    if (hint && contents.some((c) => c.toLowerCase().includes(hint.toLowerCase()))) return hint;
+    return contents[0]?.split(/[.:]/)[0]?.trim() || hint || 'Contenidos del grado';
+  };
+
   // ── Secciones como en el diseño ────────────────────────────────
   const sectionDefs = [
-    { code: 'SEC-3', name: 'A', color: '#ec4899', start: '08:00', end: '09:30', topic: 'Función cuadrática', weak: 5 },
-    { code: 'SEC-2', name: 'B', color: '#8b5cf6', start: '09:45', end: '11:15', topic: 'Sistemas de ecuaciones', weak: 2 },
-    { code: 'SEC-5', name: 'A', color: '#3b82f6', start: '13:00', end: '14:30', topic: 'Probabilidad', weak: 1 },
+    { code: 'SEC-3', name: 'A', color: '#ec4899', start: '08:00', end: '09:30', topic: topicFor('SEC-3'), weak: 5 },
+    { code: 'SEC-2', name: 'B', color: '#8b5cf6', start: '09:45', end: '11:15', topic: topicFor('SEC-2'), weak: 2 },
+    { code: 'SEC-5', name: 'A', color: '#3b82f6', start: '13:00', end: '14:30', topic: topicFor('SEC-5'), weak: 1 },
   ];
 
   for (const def of sectionDefs) {
@@ -325,7 +347,7 @@ export async function seedDemo(prisma: PrismaClient): Promise<void> {
 
   await prisma.libraryResource.createMany({
     data: [
-      { teacherId: teacher.id, title: 'Función cuadrática — GeoGebra', category: 'CHART', tags: ['funciones', 'cuadrática'], url: 'https://www.geogebra.org/m/ptj2yzn7' },
+      { teacherId: teacher.id, title: `${topicFor('SEC-3')} — GeoGebra`, category: 'CHART', tags: ['álgebra', 'polinomios'], url: 'https://www.geogebra.org/m/ptj2yzn7' },
       { teacherId: teacher.id, title: 'Sistemas de ecuaciones (video)', category: 'VIDEO', tags: ['sistemas', 'ecuaciones'], url: 'https://www.youtube.com/results?search_query=sistemas+de+ecuaciones' },
       { teacherId: teacher.id, title: 'Cuerpos geométricos para imprimir', category: 'GEOMETRY', tags: ['geometría', 'volumen'], url: 'https://www.geogebra.org/3d' },
       { teacherId: teacher.id, title: 'Adecuación Curricular — Matemática', category: 'PDF', tags: ['currículo', 'minerd'], url: 'https://www.minerd.gob.do' },
@@ -361,7 +383,7 @@ export async function seedDemo(prisma: PrismaClient): Promise<void> {
   await prisma.notification.createMany({
     data: [
       { userId: teacher.id, type: 'ERROR', title: '5 estudiantes de 3° Secundaria A presentan riesgo de bajo rendimiento', message: 'Revisa el módulo de seguimiento para ver el detalle.', link: '/app/seguimiento' },
-      { userId: teacher.id, type: 'INFO', title: '3 actividades de Sistemas de Ecuaciones listas para calificar', message: '2° Secundaria B.', link: '/app/evaluacion' },
+      { userId: teacher.id, type: 'INFO', title: `3 actividades de ${topicFor('SEC-2')} listas para calificar`, message: '2° Secundaria B.', link: '/app/evaluacion' },
       { userId: teacher.id, type: 'INFO', title: 'Mañana es feriado', message: 'La IA puede reprogramar la distribución de contenidos automáticamente.', link: '/app/calendario' },
     ],
   });

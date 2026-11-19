@@ -37,9 +37,7 @@ export class CreateAdminCommand extends BaseCommand {
       this.success('User created.');
     } catch (err) {
       this.error(
-        err instanceof Error
-          ? err.message
-          : 'Unexpected error creating user',
+        err instanceof Error ? err.message : 'Unexpected error creating user',
       );
       process.exitCode = 1;
     }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, Copy, FileDown, FilePlus2, MonitorPlay, Pencil, Plus, Printer, Search, Sparkles, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, Copy, FileDown, FilePlus2, FileText, MonitorPlay, Pencil, Plus, Printer, Search, Sparkles, Trash2, Wand2 } from 'lucide-react'
 import { aiApi, planningApi } from '@services/educraft'
 import type { LearningUnit, LessonPlan, Section } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
@@ -8,7 +8,7 @@ import { useAsync } from '@hooks/useAsync'
 import { useGrades } from '@hooks/useCatalog'
 import { Badge, Button, Card, CardHeader, EmptyState, Modal, Select, Spinner } from '@components/ui'
 import { SessionGenerator } from '@/features/ai/SessionGenerator'
-import { planDocumentHtml } from '@/features/planning/planDocument'
+import { planDocumentHtml, yintMatrixHtml } from '@/features/planning/planDocument'
 import { indicatorTexts } from '@/features/planning/LessonPlanTable'
 import { exportWord, printDocument } from '@lib/exporters'
 import { PLAN_STATUS, UNIT_KINDS } from '@lib/labels'
@@ -58,9 +58,9 @@ export function ProgramsTab({ sections }: { sections: Section[] }) {
     void units.reload()
   }
 
-  const exportPlan = async (p: LessonPlan, format: 'word' | 'pdf') => {
+  const exportPlan = async (p: LessonPlan, format: 'word' | 'pdf', template: 'official' | 'yint' = 'official') => {
     const full = await planningApi.plan(p.id)
-    const html = planDocumentHtml({
+    const data = {
       title: full.title,
       topic: full.topic,
       gradeName: full.grade.name,
@@ -73,8 +73,10 @@ export function ProgramsTab({ sections }: { sections: Section[] }) {
       indicators: indicatorTexts(full.curriculum, full.evaluation),
       curriculum: full.curriculum,
       assignment: full.assignment,
-    })
-    if (format === 'word') exportWord(full.title, html, `plan-${slugify(full.title)}`)
+    }
+    const html = template === 'yint' ? yintMatrixHtml(data) : planDocumentHtml(data)
+    const name = `${template === 'yint' ? 'yint' : 'plan'}-${slugify(full.title)}`
+    if (format === 'word') exportWord(full.title, html, name)
     else printDocument(full.title, html)
   }
 
@@ -238,6 +240,9 @@ export function ProgramsTab({ sections }: { sections: Section[] }) {
                         </button>
                         <button className="icon-btn h-8 w-8" title="Imprimir / PDF" aria-label="Imprimir" onClick={() => exportPlan(p, 'pdf')}>
                           <Printer className="h-4 w-4" />
+                        </button>
+                        <button className="icon-btn h-8 w-8" title="Matriz YinT (Word)" aria-label="Matriz YinT" onClick={() => exportPlan(p, 'word', 'yint')}>
+                          <FileText className="h-4 w-4" />
                         </button>
                         <button
                           className="icon-btn h-8 w-8 hover:text-brand-red"

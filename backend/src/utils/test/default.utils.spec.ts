@@ -1,5 +1,10 @@
 import * as fs from 'fs';
-import { fileExists, formatDate, getTime, sleep } from 'src/utils/default.utils';
+import {
+  fileExists,
+  formatDate,
+  getTime,
+  sleep,
+} from 'src/utils/default.utils';
 
 describe('default.utils', () => {
   describe('formatDate', () => {
@@ -43,7 +48,7 @@ describe('default.utils', () => {
     it('retorna true si el archivo existe', async () => {
       const spy = jest
         .spyOn(fs.promises, 'access')
-        .mockResolvedValue(undefined as any);
+        .mockResolvedValue(undefined);
       try {
         await expect(fileExists('/alguna/ruta')).resolves.toBe(true);
       } finally {
@@ -54,7 +59,9 @@ describe('default.utils', () => {
     it('retorna false si access lanza (ENOENT)', async () => {
       const spy = jest
         .spyOn(fs.promises, 'access')
-        .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+        .mockRejectedValue(
+          Object.assign(new Error('ENOENT'), { code: 'ENOENT' }),
+        );
       try {
         await expect(fileExists('/no/existe')).resolves.toBe(false);
       } finally {

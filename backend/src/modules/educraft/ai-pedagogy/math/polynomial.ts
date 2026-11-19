@@ -77,7 +77,11 @@ export function coef(p: Poly, term: string): Fraction {
 }
 
 export function variables(p: Poly): string[] {
-  return [...new Set([...p.keys()].filter((k) => k !== CONST).map((k) => k.replace('^2', '')))].sort();
+  return [
+    ...new Set(
+      [...p.keys()].filter((k) => k !== CONST).map((k) => k.replace('^2', '')),
+    ),
+  ].sort();
 }
 
 export function degree(p: Poly): number {
@@ -98,14 +102,18 @@ export function evaluate(p: Poly, values: Record<string, Fraction>): Fraction {
 
 /** Representación LaTeX ordenada: x², x, y, constante. */
 export function toLatex(p: Poly): string {
-  const order = (k: string) => (k === CONST ? 1000 : k.endsWith('^2') ? 0 : 10 + k.charCodeAt(0));
-  const terms = [...p.entries()].filter(([, v]) => !v.isZero()).sort(([a], [b]) => order(a) - order(b));
+  const order = (k: string) =>
+    k === CONST ? 1000 : k.endsWith('^2') ? 0 : 10 + k.charCodeAt(0);
+  const terms = [...p.entries()]
+    .filter(([, v]) => !v.isZero())
+    .sort(([a], [b]) => order(a) - order(b));
   if (!terms.length) return '0';
   return terms
     .map(([k, v], i) => {
       const neg = v.isNegative();
       const abs = v.abs();
-      const coefText = k === CONST ? abs.toLatex() : abs.isOne() ? '' : abs.toLatex();
+      const coefText =
+        k === CONST ? abs.toLatex() : abs.isOne() ? '' : abs.toLatex();
       const body = k === CONST ? coefText : `${coefText}${k}`;
       if (i === 0) return `${neg ? '-' : ''}${body}`;
       return ` ${neg ? '-' : '+'} ${body}`;
@@ -138,7 +146,8 @@ function tokenize(src: string): Token[] {
       let j = i;
       while (j < s.length && /[0-9.,]/.test(s[j])) j++;
       const n = Number(s.slice(i, j).replace(',', '.'));
-      if (!Number.isFinite(n)) throw new Error(`Número inválido: ${s.slice(i, j)}`);
+      if (!Number.isFinite(n))
+        throw new Error(`Número inválido: ${s.slice(i, j)}`);
       tokens.push({ t: 'num', v: new Fraction(n) });
       i = j;
     } else if (/[a-zA-Z]/.test(ch)) {
@@ -162,8 +171,10 @@ function tokenize(src: string): Token[] {
   for (let k = 0; k < tokens.length; k++) {
     const prev = out[out.length - 1];
     const cur = tokens[k];
-    const prevEnds = prev && (prev.t === 'num' || prev.t === 'var' || prev.t === ')');
-    const curStarts = cur.t === 'var' || cur.t === '(' || (cur.t === 'num' && prev?.t === ')');
+    const prevEnds =
+      prev && (prev.t === 'num' || prev.t === 'var' || prev.t === ')');
+    const curStarts =
+      cur.t === 'var' || cur.t === '(' || (cur.t === 'num' && prev?.t === ')');
     if (prevEnds && curStarts) out.push({ t: 'op', v: '*' });
     out.push(cur);
   }
@@ -178,7 +189,11 @@ export function parseExpression(src: string): Poly {
 
   function expr(): Poly {
     let left = term();
-    while (peek()?.t === 'op' && ((peek() as { v: string }).v === '+' || (peek() as { v: string }).v === '-')) {
+    while (
+      peek()?.t === 'op' &&
+      ((peek() as { v: string }).v === '+' ||
+        (peek() as { v: string }).v === '-')
+    ) {
       const op = (next() as { v: string }).v;
       const right = term();
       left = op === '+' ? add(left, right) : sub(left, right);
@@ -188,12 +203,19 @@ export function parseExpression(src: string): Poly {
 
   function term(): Poly {
     let left = unary();
-    while (peek()?.t === 'op' && ((peek() as { v: string }).v === '*' || (peek() as { v: string }).v === '/')) {
+    while (
+      peek()?.t === 'op' &&
+      ((peek() as { v: string }).v === '*' ||
+        (peek() as { v: string }).v === '/')
+    ) {
       const op = (next() as { v: string }).v;
       const right = unary();
       if (op === '*') left = mul(left, right);
       else {
-        if (!isConstant(right)) throw new Error('No se admite dividir entre una expresión con variable');
+        if (!isConstant(right))
+          throw new Error(
+            'No se admite dividir entre una expresión con variable',
+          );
         left = scale(left, Fraction.ONE.div(constValue(right)));
       }
     }
@@ -220,7 +242,10 @@ export function parseExpression(src: string): Poly {
       if (!isConstant(exp)) throw new Error('El exponente debe ser un número');
       const n = constValue(exp);
       if (!n.isInteger() || n.valueOf() < 0 || n.valueOf() > 2) {
-        if (isConstant(base)) return constant(new Fraction(Math.pow(constValue(base).valueOf(), n.valueOf())));
+        if (isConstant(base))
+          return constant(
+            new Fraction(Math.pow(constValue(base).valueOf(), n.valueOf())),
+          );
         throw new Error('Solo se admiten exponentes 0, 1 o 2');
       }
       let result = constant(Fraction.ONE);

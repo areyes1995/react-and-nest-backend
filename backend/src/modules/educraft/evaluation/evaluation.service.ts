@@ -1,12 +1,28 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Difficulty, InstrumentType, Prisma, QuestionType } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Difficulty,
+  InstrumentType,
+  Prisma,
+  QuestionType,
+} from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+import { normalizeInstrumentContent } from '../ai-pedagogy/generators/pedagogy-templates';
+import { TeacherScopeService } from '../shared/teacher-scope.service';
+import {
+  scoreInstrument,
+  validateInstrumentContent,
+} from './dto/instrument-content';
 import {
   BulkQuestionsDto,
   CreateExamDto,
   CreateInstrumentDto,
   CreateQuestionDto,
   RandomExamDto,
+  SaveInstrumentScoresDto,
   UpdateExamDto,
   UpdateInstrumentDto,
   UpdateQuestionDto,
@@ -22,17 +38,30 @@ const EXAM_INCLUDE = {
 } satisfies Prisma.ExamInclude;
 
 /** Tipos de pregunta que se corrigen automáticamente. */
-export const OBJECTIVE_TYPES: QuestionType[] = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'MATCHING', 'COMPLETE'];
+export const OBJECTIVE_TYPES: QuestionType[] = [
+  'MULTIPLE_CHOICE',
+  'TRUE_FALSE',
+  'MATCHING',
+  'COMPLETE',
+];
 
 @Injectable()
 export class EvaluationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scope: TeacherScopeService,
+  ) {}
 
   // ── Banco de preguntas ────────────────────────────
 
   listQuestions(
     teacherId: number,
-    filter: { q?: string; type?: QuestionType; gradeId?: number; difficulty?: Difficulty },
+    filter: {
+      q?: string;
+      type?: QuestionType;
+      gradeId?: number;
+      difficulty?: Difficulty;
+    },
   ) {
     const q = filter.q?.trim();
     return this.prisma.question.findMany({
@@ -58,12 +87,16 @@ export class EvaluationService {
   }
 
   createQuestion(teacherId: number, dto: CreateQuestionDto) {
-    return this.prisma.question.create({ data: this.questionData(teacherId, dto) });
+    return this.prisma.question.create({
+      data: this.questionData(teacherId, dto),
+    });
   }
 
   async createQuestions(teacherId: number, dto: BulkQuestionsDto) {
     const created = await this.prisma.$transaction(
-      dto.questions.map((q) => this.prisma.question.create({ data: this.questionData(teacherId, q) })),
+      dto.questions.map((q) =>
+        this.prisma.question.create({ data: this.questionData(teacherId, q) }),
+      ),
     );
     return created;
   }
@@ -90,16 +123,43 @@ export class EvaluationService {
 
   async removeQuestion(teacherId: number, id: number) {
     await this.findQuestion(teacherId, id);
-    await this.prisma.question.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.question.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   private async findQuestion(teacherId: number, id: number) {
-    const q = await this.prisma.question.findFirst({ where: { id, teacherId, deletedAt: null } });
+    const q = await this.prisma.question.findFirst({
+      where: { id, teacherId, deletedAt: null },
+    });
     if (!q) throw new NotFoundException(`Pregunta ${id} no encontrada`);
     return q;
   }
 
-  private questionData(teacherId: number, dto: CreateQuestionDto): Prisma.QuestionUncheckedCreateInput {
+  /** Vista completa del docente: respuesta y solución incluidas. */
+  async getQuestion(teacherId: number, id: number) {
+    return this.findQuestion(teacherId, id);
+  }
+
+  /** Vista segura del estudiante: nunca incluye respuesta ni solución. */
+  async studentQuestion(teacherId: number, id: number) {
+    const q = await this.findQuestion(teacherId, id);
+    return {
+      id: q.id,
+      topic: q.topic,
+      type: q.type,
+      difficulty: q.difficulty,
+      statement: q.statement,
+      options: q.options,
+      points: q.points,
+    };
+  }
+
+  private questionData(
+    teacherId: number,
+    dto: CreateQuestionDto,
+  ): Prisma.QuestionUncheckedCreateInput {
     return {
       teacherId,
       gradeId: dto.gradeId,
@@ -122,7 +182,11 @@ export class EvaluationService {
   listExams(teacherId: number) {
     return this.prisma.exam.findMany({
       where: { teacherId, deletedAt: null },
-      include: { grade: true, fundamental: true, _count: { select: { questions: true } } },
+      include: {
+        grade: true,
+        fundamental: true,
+        _count: { select: { questions: true } },
+      },
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -136,8 +200,56 @@ export class EvaluationService {
     return exam;
   }
 
+  /** Examen sin respuestas ni soluciones: seguro antes de la publicación. */
+  async studentExam(teacherId: number, id: number) {
+    const exam = await this.getExam(teacherId, id);
+    return {
+      id: exam.id,
+      title: exam.title,
+      instructions: exam.instructions,
+      durationMinutes: exam.durationMinutes,
+      questions: exam.questions.map((eq, index) => ({
+        number: index + 1,
+        questionId: eq.questionId,
+        type: eq.question.type,
+        statement: eq.question.statement,
+        options: eq.question.options,
+        points: eq.points ?? eq.question.points,
+      })),
+      totalPoints: exam.questions.reduce(
+        (sum, eq) => sum + (eq.points ?? eq.question.points),
+        0,
+      ),
+    };
+  }
+
+  /** Clave de respuestas: solo se expone al docente dueño del examen. */
+  async answerKey(teacherId: number, id: number) {
+    const exam = await this.getExam(teacherId, id);
+    return {
+      examId: exam.id,
+      title: exam.title,
+      questions: exam.questions.map((eq, index) => ({
+        number: index + 1,
+        questionId: eq.questionId,
+        answer: eq.question.answer,
+        solution: eq.question.solution,
+        formatted: formatAnswer(
+          eq.question.type,
+          eq.question.answer,
+          Array.isArray(eq.question.options)
+            ? (eq.question.options as unknown[]).map(String)
+            : undefined,
+        ),
+      })),
+    };
+  }
+
   async createExam(teacherId: number, dto: CreateExamDto) {
-    await this.assertOwnQuestions(teacherId, dto.questions?.map((q) => q.questionId) ?? []);
+    await this.assertOwnQuestions(
+      teacherId,
+      dto.questions?.map((q) => q.questionId) ?? [],
+    );
     return this.prisma.exam.create({
       data: {
         teacherId,
@@ -165,7 +277,10 @@ export class EvaluationService {
   async updateExam(teacherId: number, id: number, dto: UpdateExamDto) {
     await this.getExam(teacherId, id);
     if (dto.questions) {
-      await this.assertOwnQuestions(teacherId, dto.questions.map((q) => q.questionId));
+      await this.assertOwnQuestions(
+        teacherId,
+        dto.questions.map((q) => q.questionId),
+      );
     }
     return this.prisma.$transaction(async (tx) => {
       if (dto.questions) {
@@ -198,7 +313,10 @@ export class EvaluationService {
 
   async removeExam(teacherId: number, id: number) {
     await this.getExam(teacherId, id);
-    await this.prisma.exam.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.exam.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   /** Crea un examen con preguntas aleatorias del banco según filtros. */
@@ -210,12 +328,16 @@ export class EvaluationService {
         ...(dto.gradeId ? { gradeId: dto.gradeId } : {}),
         ...(dto.difficulty ? { difficulty: dto.difficulty } : {}),
         ...(dto.types?.length ? { type: { in: dto.types } } : {}),
-        ...(dto.topic ? { topic: { contains: dto.topic, mode: 'insensitive' } } : {}),
+        ...(dto.topic
+          ? { topic: { contains: dto.topic, mode: 'insensitive' } }
+          : {}),
       },
       select: { id: true },
     });
     if (pool.length === 0) {
-      throw new BadRequestException('No hay preguntas en el banco que cumplan los filtros');
+      throw new BadRequestException(
+        'No hay preguntas en el banco que cumplan los filtros',
+      );
     }
     const chosen = shuffle(pool, Math.random).slice(0, dto.count);
     return this.createExam(teacherId, {
@@ -237,16 +359,34 @@ export class EvaluationService {
     const total = Math.min(6, Math.max(1, count ?? exam.versions));
     const letters = 'ABCDEF';
     return {
-      exam: { id: exam.id, title: exam.title, instructions: exam.instructions, durationMinutes: exam.durationMinutes },
+      exam: {
+        id: exam.id,
+        title: exam.title,
+        instructions: exam.instructions,
+        durationMinutes: exam.durationMinutes,
+      },
       versions: Array.from({ length: total }, (_, v) => {
         const rng = seeded(exam.id * 97 + v * 13 + 1);
-        const items = v === 0 && !exam.shuffle ? exam.questions : shuffle(exam.questions, rng);
+        const items =
+          v === 0 && !exam.shuffle
+            ? exam.questions
+            : shuffle(exam.questions, rng);
         const questions = items.map((eq, index) => {
           const q = eq.question;
-          let options = Array.isArray(q.options) ? (q.options as unknown[]).map(String) : undefined;
+          let options = Array.isArray(q.options)
+            ? (q.options as unknown[]).map(String)
+            : undefined;
           let answer: unknown = q.answer;
-          if (q.type === 'MULTIPLE_CHOICE' && options && typeof q.answer === 'number' && v > 0) {
-            const order = shuffle(options.map((_, i) => i), rng);
+          if (
+            q.type === 'MULTIPLE_CHOICE' &&
+            options &&
+            typeof q.answer === 'number' &&
+            v > 0
+          ) {
+            const order = shuffle(
+              options.map((_, i) => i),
+              rng,
+            );
             options = order.map((i) => options![i]);
             answer = order.indexOf(q.answer);
           }
@@ -274,8 +414,14 @@ export class EvaluationService {
     };
   }
 
-  /** Corrección automática de preguntas objetivas. */
-  async grade(teacherId: number, id: number, version: number, answers: Record<number, unknown>) {
+  /** Corrección automática de preguntas objetivas; opcionalmente persiste el resultado. */
+  async grade(
+    teacherId: number,
+    id: number,
+    version: number,
+    answers: Record<number, unknown>,
+    target: { studentId?: number; assessmentId?: number } = {},
+  ) {
     const data = await this.versions(teacherId, id, version + 1);
     const v = data.versions[version];
     if (!v) throw new BadRequestException('Versión inexistente');
@@ -283,13 +429,93 @@ export class EvaluationService {
     let objectivePoints = 0;
     const detail = v.questions.map((q) => {
       const given = answers[q.number];
-      if (!OBJECTIVE_TYPES.includes(q.type)) return { number: q.number, auto: false };
+      if (!OBJECTIVE_TYPES.includes(q.type))
+        return { number: q.number, auto: false };
       objectivePoints += q.points;
       const correct = sameAnswer(q.answer, given);
       if (correct) score += q.points;
       return { number: q.number, auto: true, correct };
     });
-    return { score, objectivePoints, totalPoints: v.totalPoints, detail };
+    const result = {
+      score,
+      objectivePoints,
+      totalPoints: v.totalPoints,
+      detail,
+    };
+    if (!target.studentId && !target.assessmentId) return result;
+    return {
+      ...result,
+      saved: await this.persistExamGrade(
+        teacherId,
+        id,
+        version,
+        result,
+        target,
+      ),
+    };
+  }
+
+  private async persistExamGrade(
+    teacherId: number,
+    examId: number,
+    version: number,
+    result: { score: number; objectivePoints: number; totalPoints: number },
+    target: { studentId?: number; assessmentId?: number },
+  ) {
+    if (!target.studentId) {
+      throw new BadRequestException(
+        'Se necesita el estudiante para guardar la calificación',
+      );
+    }
+    await this.scope.student(teacherId, target.studentId);
+    let assessmentId = target.assessmentId;
+    if (!assessmentId) {
+      const found = await this.prisma.assessment.findFirst({
+        where: {
+          examId,
+          teacherId,
+          deletedAt: null,
+          section: {
+            students: { some: { id: target.studentId, deletedAt: null } },
+          },
+        },
+        orderBy: { date: 'desc' },
+        select: { id: true },
+      });
+      if (!found) {
+        throw new BadRequestException(
+          'Indica la actividad evaluada donde se guardará la calificación',
+        );
+      }
+      assessmentId = found.id;
+    }
+    const assessment = await this.scope.assessment(teacherId, assessmentId);
+    const score = result.totalPoints
+      ? Math.round(
+          (result.score / result.totalPoints) * assessment.maxScore * 10,
+        ) / 10
+      : 0;
+    const instrumentData = {
+      origen: 'CORRECCION_EXAMEN',
+      examId,
+      version,
+      objectivePoints: result.objectivePoints,
+    } as Prisma.InputJsonValue;
+    await this.prisma.assessmentScore.upsert({
+      where: {
+        assessmentId_studentId: { assessmentId, studentId: target.studentId },
+      },
+      update: { score, delivered: true, gradedAt: new Date(), instrumentData },
+      create: {
+        assessmentId,
+        studentId: target.studentId,
+        score,
+        delivered: true,
+        gradedAt: new Date(),
+        instrumentData,
+      },
+    });
+    return { assessmentId, studentId: target.studentId, score };
   }
 
   private async assertOwnQuestions(teacherId: number, ids: number[]) {
@@ -317,11 +543,17 @@ export class EvaluationService {
       where: { id, teacherId, deletedAt: null },
       include: { grade: true, fundamental: true },
     });
-    if (!instrument) throw new NotFoundException(`Instrumento ${id} no encontrado`);
+    if (!instrument)
+      throw new NotFoundException(`Instrumento ${id} no encontrado`);
     return instrument;
   }
 
   createInstrument(teacherId: number, dto: CreateInstrumentDto) {
+    const content = dto.aiGenerated
+      ? normalizeInstrumentContent(dto.content)
+      : dto.content;
+    const validation = validateInstrumentContent(dto.type, content);
+    if (!validation.ok) throw new BadRequestException(validation.message);
     return this.prisma.evaluationInstrument.create({
       data: {
         teacherId,
@@ -330,14 +562,25 @@ export class EvaluationService {
         description: dto.description,
         gradeId: dto.gradeId,
         fundamentalId: dto.fundamentalId,
-        content: dto.content as Prisma.InputJsonValue,
+        content: content as Prisma.InputJsonValue,
         aiGenerated: dto.aiGenerated ?? false,
       },
     });
   }
 
-  async updateInstrument(teacherId: number, id: number, dto: UpdateInstrumentDto) {
-    await this.getInstrument(teacherId, id);
+  async updateInstrument(
+    teacherId: number,
+    id: number,
+    dto: UpdateInstrumentDto,
+  ) {
+    const current = await this.getInstrument(teacherId, id);
+    if (dto.content !== undefined) {
+      const validation = validateInstrumentContent(
+        dto.type ?? current.type,
+        dto.content,
+      );
+      if (!validation.ok) throw new BadRequestException(validation.message);
+    }
     return this.prisma.evaluationInstrument.update({
       where: { id },
       data: {
@@ -351,9 +594,96 @@ export class EvaluationService {
     });
   }
 
+  /** Guarda la cuadrícula de marcas de un instrumento para todo el listado. */
+  async saveInstrumentScores(
+    teacherId: number,
+    id: number,
+    dto: SaveInstrumentScoresDto,
+  ) {
+    const assessment = await this.scope.assessment(teacherId, id);
+    if (!assessment.instrumentId) {
+      throw new BadRequestException(
+        'La actividad no tiene un instrumento de evaluación asociado',
+      );
+    }
+    const instrument = await this.getInstrument(
+      teacherId,
+      assessment.instrumentId,
+    );
+    const unique = [...new Set(dto.entries.map((entry) => entry.studentId))];
+    const count = await this.prisma.student.count({
+      where: {
+        sectionId: assessment.sectionId,
+        id: { in: unique },
+        deletedAt: null,
+      },
+    });
+    if (count !== unique.length) {
+      throw new BadRequestException(
+        'Hay estudiantes que no pertenecen a la sección',
+      );
+    }
+    const now = new Date();
+    const operations: Prisma.PrismaPromise<unknown>[] = [];
+    const rows: Array<{
+      studentId: number;
+      score: number | null;
+      instrumentData: Record<string, unknown>;
+    }> = [];
+    for (const entry of dto.entries) {
+      const result = scoreInstrument(
+        instrument.type,
+        instrument.content,
+        entry.instrumentData,
+        assessment.maxScore,
+      );
+      if (result.error)
+        throw new BadRequestException(
+          `Estudiante ${entry.studentId}: ${result.error}`,
+        );
+      const instrumentData = entry.instrumentData as Prisma.InputJsonValue;
+      operations.push(
+        this.prisma.assessmentScore.upsert({
+          where: {
+            assessmentId_studentId: {
+              assessmentId: id,
+              studentId: entry.studentId,
+            },
+          },
+          update: {
+            instrumentData,
+            score: result.score,
+            delivered: entry.delivered ?? result.score != null,
+            feedback: entry.feedback,
+            gradedAt: result.score != null ? now : null,
+          },
+          create: {
+            assessmentId: id,
+            studentId: entry.studentId,
+            instrumentData,
+            score: result.score,
+            delivered: entry.delivered ?? result.score != null,
+            feedback: entry.feedback,
+            gradedAt: result.score != null ? now : null,
+          },
+        }),
+      );
+      rows.push({
+        studentId: entry.studentId,
+        score: result.score,
+        instrumentData: entry.instrumentData,
+      });
+    }
+    if (operations.length) await this.prisma.$transaction(operations);
+    return { assessmentId: id, saved: rows.length, rows };
+  }
+
   async removeInstrument(teacherId: number, id: number) {
     await this.getInstrument(teacherId, id);
-    await this.prisma.evaluationInstrument.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.evaluationInstrument.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 }
 
@@ -376,14 +706,22 @@ export function shuffle<T>(items: readonly T[], rng: () => number): T[] {
   return copy;
 }
 
-function formatAnswer(type: QuestionType, answer: unknown, options?: string[]): string {
+function formatAnswer(
+  type: QuestionType,
+  answer: unknown,
+  options?: string[],
+): string {
   if (answer == null) return '—';
   if (type === 'MULTIPLE_CHOICE' && typeof answer === 'number') {
     const letter = String.fromCharCode(97 + answer);
     return options?.[answer] ? `${letter}) ${options[answer]}` : letter;
   }
-  if (type === 'TRUE_FALSE') return answer === true || answer === 'true' ? 'Verdadero' : 'Falso';
-  if (Array.isArray(answer)) return answer.map((a) => (Array.isArray(a) ? a.join(' → ') : String(a))).join('; ');
+  if (type === 'TRUE_FALSE')
+    return answer === true || answer === 'true' ? 'Verdadero' : 'Falso';
+  if (Array.isArray(answer))
+    return answer
+      .map((a) => (Array.isArray(a) ? a.join(' → ') : String(a)))
+      .join('; ');
   return String(answer);
 }
 

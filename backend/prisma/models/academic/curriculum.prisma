@@ -1,9 +1,59 @@
 // ======================================================
 // CURRÍCULO — Adecuación Curricular de Matemática
-// (MINERD, Nivel Secundario). Catálogo global de solo
-// lectura para los docentes: se siembra con
+// (MINERD, Nivel Secundario). Catálogo global consultable
+// por los docentes y editable por quienes tengan el permiso
+// `curriculum:manage`. Se siembra con
 // `prisma/seeders/curriculum.seeder.ts`.
 // ======================================================
+
+/// Eje transversal de la Adecuación, definido por ciclo.
+/// Los cinco ejes del documento se asocian a cada ciclo y
+/// conservan los enunciados por grado en `gradeDetails`.
+model CrossCuttingAxis {
+  id           Int      @id @default(autoincrement())
+  code         String   @db.VarChar(40) // SALUD_BIENESTAR, ...
+  name         String   @db.VarChar(120) // "Salud y Bienestar"
+  cycle        Int // 1 = Primer Ciclo, 2 = Segundo Ciclo
+  description  String   @db.Text // síntesis del eje en el ciclo
+  gradeDetails String[] // enunciados por grado: "1ro: …"
+  order        Int      @default(0)
+
+  @@unique([code, cycle])
+  @@index([cycle])
+}
+
+/// Capacidad derivada de una competencia específica de un grado.
+model Capacity {
+  id                   Int    @id @default(autoincrement())
+  code                 String @unique @db.VarChar(80) // SEC-1-COMUNICATIVA
+  gradeId              Int
+  specificCompetenceId Int
+  description          String @db.Text
+  order                Int    @default(0)
+
+  grade              CurriculumGrade    @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  specificCompetence SpecificCompetence @relation(fields: [specificCompetenceId], references: [id], onDelete: Cascade)
+  performances       Performance[]
+
+  @@index([gradeId])
+  @@index([specificCompetenceId])
+}
+
+/// Desempeño esperado (logro) asociado a una capacidad.
+model Performance {
+  id          Int    @id @default(autoincrement())
+  code        String @unique @db.VarChar(100) // SEC-1-COMUNICATIVA-01
+  gradeId     Int
+  capacityId  Int
+  description String @db.Text
+  order       Int    @default(0)
+
+  grade    CurriculumGrade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  capacity Capacity        @relation(fields: [capacityId], references: [id], onDelete: Cascade)
+
+  @@index([gradeId])
+  @@index([capacityId])
+}
 
 /// Grado del Nivel Secundario (1ro a 6to).
 model CurriculumGrade {
@@ -26,6 +76,8 @@ model CurriculumGrade {
   exams               Exam[]
   instruments         EvaluationInstrument[]
   activities          InteractiveActivity[]
+  capacities          Capacity[]
+  performances        Performance[]
 }
 
 /// Competencia fundamental del currículo dominicano.
@@ -57,6 +109,7 @@ model SpecificCompetence {
 
   grade       CurriculumGrade       @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   fundamental FundamentalCompetence @relation(fields: [fundamentalId], references: [id], onDelete: Cascade)
+  capacities  Capacity[]
 
   @@unique([gradeId, fundamentalId])
 }

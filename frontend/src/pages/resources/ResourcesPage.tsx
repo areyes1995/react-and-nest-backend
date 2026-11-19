@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Download, ExternalLink, FileText, Folder, Image as ImageIcon, Link2, Pencil, Search, Trash2, UploadCloud, Video } from 'lucide-react'
+import { BASE_URL, post, upload, type ApiResponse } from '@services/api'
 import { libraryApi } from '@services/educraft'
 import type { LibraryResource, ResourceCategory } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
@@ -12,6 +13,25 @@ import { downloadBlob, formatBytes, formatDate } from '@lib/format'
 import { cn } from '@lib/cn'
 
 const FOLDERS: ResourceCategory[] = ['IMAGE', 'GEOMETRY', 'CHART', 'VIDEO', 'PDF', 'TEMPLATE', 'ILLUSTRATION', 'ICON', 'BACKGROUND', 'ANIMATION', 'OWN']
+const MAX_FILE_BYTES = 25 * 1024 * 1024
+
+const unwrap = async <T,>(promise: Promise<ApiResponse<T>>): Promise<T> => {
+  const res = await promise
+  if (!res.ok) throw new Error(res.error || 'No se pudo completar la operación')
+  return res.data
+}
+
+const libraryBulkTags = (id: number, body: { add?: string[]; remove?: string[] }) =>
+  unwrap(post<LibraryResource>(`/library/${id}/tags`, body))
+
+const libraryShare = (id: number) =>
+  unwrap(post<{ url: string; token: string; expiresAt: string }>(`/library/${id}/share`, { days: 30 }))
+
+const libraryReplaceFile = (id: number, file: File) => {
+  const form = new FormData()
+  form.set('file', file)
+  return upload<LibraryResource>(`/library/${id}/replace-file`, form)
+}
 
 function guessCategory(file: File): ResourceCategory {
   if (file.type.startsWith('image/')) return 'IMAGE'
@@ -56,10 +76,17 @@ export default function ResourcesPage() {
   const [linkOpen, setLinkOpen] = useState(false)
   const [editing, setEditing] = useState<LibraryResource | null>(null)
   const [link, setLink] = useState({ title: '', url: '', category: 'VIDEO' as ResourceCategory, tags: '' })
+  const [editOriginalTags, setEditOriginalTags] = useState<string[]>([])
+  const [replacement, setReplacement] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const replacementRef = useRef<HTMLInputElement>(null)
 
   const uploadFiles = async (files: FileList | File[]) => {
-    const list = Array.from(files)
+    const list = Array.from(files).filter((file) => {
+      if (file.size <= MAX_FILE_BYTES) return true
+      error('Archivo demasiado grande', `${file.name} supera el límite de 25 MB`)
+      return false
+    })
     if (!list.length) return
     setUploading({ done: 0, total: list.length })
     let ok = 0
@@ -92,15 +119,43 @@ export default function ResourcesPage() {
     }
   }
 
+  const openEdit = (resource: LibraryResource) => {
+    setEditing(resource)
+    setEditOriginalTags(resource.tags)
+    setReplacement(null)
+  }
+
   const saveEdit = async () => {
     if (!editing) return
+    if (replacement && replacement.size > MAX_FILE_BYTES) {
+      error('Archivo demasiado grande', `${replacement.name} supera el límite de 25 MB`)
+      return
+    }
     try {
-      await libraryApi.update(editing.id, { title: editing.title, description: editing.description, category: editing.category, tags: editing.tags })
+      await libraryApi.update(editing.id, { title: editing.title, description: editing.description, category: editing.category })
+      const add = editing.tags.filter((tag) => !editOriginalTags.includes(tag))
+      const remove = editOriginalTags.filter((tag) => !editing.tags.includes(tag))
+      if (add.length || remove.length) await libraryBulkTags(editing.id, { add, remove })
+      if (replacement) await libraryReplaceFile(editing.id, replacement)
       setEditing(null)
+      setReplacement(null)
+      success('Recurso actualizado')
       void reload()
       void summary.reload()
     } catch (err) {
       error('No se pudo guardar', (err as Error).message)
+    }
+  }
+
+  const shareResource = async (resource: LibraryResource) => {
+    try {
+      const link = await libraryShare(resource.id)
+      const url = `${BASE_URL}${link.url}`
+      const clipboard = navigator.clipboard
+      if (clipboard) void clipboard.writeText(url).catch(() => undefined)
+      success('Enlace de solo lectura creado', `${url} · vence ${formatDate(link.expiresAt)}`)
+    } catch (err) {
+      error('No se pudo compartir', (err as Error).message)
     }
   }
 
@@ -212,7 +267,10 @@ export default function ResourcesPage() {
                           <Download className="h-4 w-4" />
                         </button>
                       )}
-                      <button className="icon-btn h-8 w-8" aria-label="Editar" onClick={() => setEditing(r)}>
+                      <button className="icon-btn h-8 w-8" aria-label="Compartir" title="Copiar enlace de solo lectura" onClick={() => void shareResource(r)}>
+                        <Link2 className="h-4 w-4" />
+                      </button>
+                      <button className="icon-btn h-8 w-8" aria-label="Editar" onClick={() => openEdit(r)}>
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
@@ -254,7 +312,7 @@ export default function ResourcesPage() {
         </div>
       </Modal>
 
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar recurso" footer={<Button onClick={saveEdit}>Guardar</Button>}>
+      <Modal open={!!editing} onClose={() => { setEditing(null); setReplacement(null) }} title="Editar recurso" footer={<Button onClick={saveEdit}>Guardar</Button>}>
         {editing && (
           <div className="space-y-3">
             <Field label="Título">
@@ -269,6 +327,14 @@ export default function ResourcesPage() {
             <Field label="Descripción">
               <Input value={editing.description ?? ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
             </Field>
+            {editing.storageKey && (
+              <Field label="Reemplazar archivo" hint="Máximo 25 MB">
+                <Button variant="secondary" icon={<UploadCloud className="h-4 w-4" />} onClick={() => replacementRef.current?.click()}>
+                  {replacement ? replacement.name : 'Seleccionar nuevo archivo'}
+                </Button>
+                <input ref={replacementRef} type="file" className="hidden" onChange={(e) => setReplacement(e.target.files?.[0] ?? null)} />
+              </Field>
+            )}
           </div>
         )}
       </Modal>

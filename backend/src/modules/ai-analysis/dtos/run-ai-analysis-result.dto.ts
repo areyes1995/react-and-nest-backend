@@ -1,4 +1,4 @@
-import { AiAnalysisDto } from "./ai-analysis.dto";
+import { AiAnalysisDto } from './ai-analysis.dto';
 
 export interface RunAiAnalysisResult<T> {
   analysis: AiAnalysisDto;

@@ -4,7 +4,7 @@ import type { LearningUnit, Section, UnitKind } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
 import { useGrades } from '@hooks/useCatalog'
 import { Button, Field, Input, Modal, Select, Textarea } from '@components/ui'
-import { CurriculumPicker } from '@/features/planning/CurriculumPicker'
+import { CurriculumPicker, EMPTY_CURRICULUM_SELECTION } from '@/features/planning/CurriculumPicker'
 import { UNIT_KINDS } from '@lib/labels'
 import { sectionLabel } from '@lib/format'
 
@@ -46,8 +46,11 @@ export function UnitEditorModal({
           specificCompetenceIds: unit.specificCompetenceIds,
           indicatorIds: unit.indicatorIds,
           contentIds: unit.contentIds,
+          axisIds: unit.axisIds ?? [],
+          capacityIds: unit.capacityIds ?? [],
+          performanceIds: unit.performanceIds ?? [],
         }
-      : { gradeId: defaults?.gradeId ?? grades[0]?.id ?? 1, kind: 'UNIT', title: '', specificCompetenceIds: [], indicatorIds: [], contentIds: [], ...defaults }
+      : { gradeId: defaults?.gradeId ?? grades[0]?.id ?? 1, kind: 'UNIT', title: '', ...EMPTY_CURRICULUM_SELECTION, ...defaults }
     setForm(base)
     setCriteria((unit?.evaluationCriteria ?? []).join('\n'))
     setEvidences((unit?.evidences ?? []).join('\n'))
@@ -101,7 +104,7 @@ export function UnitEditorModal({
               <Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as UnitKind })} options={Object.entries(UNIT_KINDS).map(([v, l]) => ({ value: v, label: l }))} />
             </Field>
             <Field label="Grado">
-              <Select value={form.gradeId} onChange={(e) => setForm({ ...form, gradeId: Number(e.target.value), specificCompetenceIds: [], indicatorIds: [], contentIds: [] })} options={grades.map((g) => ({ value: g.id, label: g.name }))} />
+              <Select value={form.gradeId} onChange={(e) => setForm({ ...form, gradeId: Number(e.target.value), ...EMPTY_CURRICULUM_SELECTION })} options={grades.map((g) => ({ value: g.id, label: g.name }))} />
             </Field>
           </div>
           <Field label="Título">
@@ -129,10 +132,17 @@ export function UnitEditorModal({
           </Field>
         </div>
         <div>
-          <p className="label">Competencias, indicadores y contenidos</p>
+          <p className="label">Ejes, competencias, capacidades, desempeños, indicadores y contenidos</p>
           <CurriculumPicker
             gradeId={form.gradeId}
-            value={{ specificCompetenceIds: form.specificCompetenceIds ?? [], indicatorIds: form.indicatorIds ?? [], contentIds: form.contentIds ?? [] }}
+            value={{
+              specificCompetenceIds: form.specificCompetenceIds ?? [],
+              indicatorIds: form.indicatorIds ?? [],
+              contentIds: form.contentIds ?? [],
+              axisIds: form.axisIds ?? [],
+              capacityIds: form.capacityIds ?? [],
+              performanceIds: form.performanceIds ?? [],
+            }}
             onChange={(v) => setForm({ ...form, ...v })}
           />
         </div>

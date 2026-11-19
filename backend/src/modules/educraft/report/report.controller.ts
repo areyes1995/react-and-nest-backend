@@ -1,5 +1,17 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
-import { ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
+import { ApiProduces, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { CurrentUser } from 'src/modules/auth/decorators/current-user.decorator';
 import { Public } from 'src/modules/auth/decorators/public.decorator';
 import { AuthenticatedUser } from '../shared/authenticated-user';
@@ -16,15 +28,33 @@ export class ReportController {
     private readonly attendance: AttendanceService,
   ) {}
 
+  private sendHtml(res: Response, html: string, fileName: string) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(html);
+  }
+
   @Get('sections/:sectionId/performance')
   @ApiQuery({ name: 'period', required: false })
-  @ApiResponse({ status: 200, description: 'Rendimiento, competencias y asistencia por estudiante.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Rendimiento, competencias y asistencia por estudiante.',
+  })
   performance(
     @CurrentUser() user: AuthenticatedUser,
     @Param('sectionId', ParseIntPipe) sectionId: number,
     @Query('period') period?: string,
   ) {
-    return this.reports.sectionPerformance(user.id, sectionId, optionalInt(period));
+    return this.reports.sectionPerformance(
+      user.id,
+      sectionId,
+      optionalInt(period),
+    );
   }
 
   @Get('sections/:sectionId/competences/:block')
@@ -35,7 +65,12 @@ export class ReportController {
     @Param('block', ParseIntPipe) block: number,
     @Query('period') period?: string,
   ) {
-    return this.reports.competenceDetail(user.id, sectionId, block, optionalInt(period));
+    return this.reports.competenceDetail(
+      user.id,
+      sectionId,
+      block,
+      optionalInt(period),
+    );
   }
 
   @Get('sections/:sectionId/attendance')
@@ -51,23 +86,74 @@ export class ReportController {
   }
 
   @Get('sections/:sectionId/conduct')
-  conduct(@CurrentUser() user: AuthenticatedUser, @Param('sectionId', ParseIntPipe) sectionId: number) {
+  conduct(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('sectionId', ParseIntPipe) sectionId: number,
+  ) {
     return this.reports.conduct(user.id, sectionId);
   }
 
+  @Get('sections/:sectionId/bulletins/export')
+  @ApiProduces('text/html')
+  @ApiResponse({
+    status: 200,
+    description: 'Boletines oficiales de la sección en HTML imprimible.',
+  })
+  async sectionBulletinsExport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('sectionId', ParseIntPipe) sectionId: number,
+    @Res() res: Response,
+  ) {
+    const { html, fileName } = await this.reports.sectionBulletinExport(
+      user.id,
+      sectionId,
+    );
+    this.sendHtml(res, html, fileName);
+  }
+
   @Get('students/:studentId/bulletin')
-  @ApiResponse({ status: 200, description: 'Datos del boletín oficial (plantilla MINERD).' })
-  bulletin(@CurrentUser() user: AuthenticatedUser, @Param('studentId', ParseIntPipe) studentId: number) {
+  @ApiResponse({
+    status: 200,
+    description: 'Datos del boletín oficial (plantilla MINERD).',
+  })
+  bulletin(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('studentId', ParseIntPipe) studentId: number,
+  ) {
     return this.reports.bulletin(user.id, studentId);
   }
 
+  @Get('students/:studentId/bulletin/export')
+  @ApiProduces('text/html')
+  @ApiResponse({
+    status: 200,
+    description: 'Boletín oficial del estudiante en HTML imprimible.',
+  })
+  async bulletinExport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @Res() res: Response,
+  ) {
+    const { html, fileName } = await this.reports.bulletinExport(
+      user.id,
+      studentId,
+    );
+    this.sendHtml(res, html, fileName);
+  }
+
   @Get('students/:studentId/parent')
-  parent(@CurrentUser() user: AuthenticatedUser, @Param('studentId', ParseIntPipe) studentId: number) {
+  parent(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('studentId', ParseIntPipe) studentId: number,
+  ) {
     return this.reports.parentReport(user.id, studentId);
   }
 
   @Post('students/:studentId/share')
-  @ApiResponse({ status: 201, description: 'Crea un enlace seguro de solo lectura para la familia.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Crea un enlace seguro de solo lectura para la familia.',
+  })
   share(
     @CurrentUser() user: AuthenticatedUser,
     @Param('studentId', ParseIntPipe) studentId: number,
@@ -78,12 +164,18 @@ export class ReportController {
 
   @Delete('shares/:linkId')
   @HttpCode(204)
-  revoke(@CurrentUser() user: AuthenticatedUser, @Param('linkId', ParseIntPipe) linkId: number) {
+  revoke(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('linkId', ParseIntPipe) linkId: number,
+  ) {
     return this.reports.revokeShare(user.id, linkId);
   }
 
   @Get('alerts')
-  @ApiResponse({ status: 200, description: 'Alertas de bajo rendimiento, asistencia y entregas.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Alertas de bajo rendimiento, asistencia y entregas.',
+  })
   alerts(@CurrentUser() user: AuthenticatedUser) {
     return this.reports.alerts(user.id);
   }
@@ -97,7 +189,10 @@ export class PublicReportController {
 
   @Get(':token')
   @Public()
-  @ApiResponse({ status: 200, description: 'Informe del estudiante para la familia.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Informe del estudiante para la familia.',
+  })
   @ApiResponse({ status: 404, description: 'Enlace inválido o expirado.' })
   report(@Param('token') token: string) {
     return this.reports.publicReport(token);

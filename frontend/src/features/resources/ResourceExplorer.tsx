@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink, GripVertical, Search } from 'lucide-react'
 import { libraryApi } from '@services/educraft'
@@ -15,6 +15,7 @@ export function ResourceExplorerDrawer({ open, onClose }: { open: boolean; onClo
   const [q, setQ] = useState('')
   const [category, setCategory] = useState<ResourceCategory | ''>('')
   const term = useDebounce(q, 250)
+  const searchId = useId()
 
   useEffect(() => {
     if (!open) return
@@ -26,15 +27,18 @@ export function ResourceExplorerDrawer({ open, onClose }: { open: boolean; onClo
     <Drawer open={open} onClose={onClose} title="Biblioteca de recursos" subtitle="Arrastra un recurso hacia la clase o sesión que estés editando">
       <div className="space-y-3 p-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por título o etiqueta" className="input pl-9" />
+          <label htmlFor={searchId} className="sr-only">
+            Buscar recursos por título o etiqueta
+          </label>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" />
+          <input id={searchId} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por título o etiqueta" className="input pl-9" />
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setCategory('')} className={`chip ${!category ? 'chip-active' : ''}`}>
+          <button type="button" aria-pressed={!category} onClick={() => setCategory('')} className={`chip ${!category ? 'chip-active' : ''}`}>
             Todos
           </button>
           {(['IMAGE', 'GEOMETRY', 'CHART', 'VIDEO', 'PDF', 'OWN'] as ResourceCategory[]).map((c) => (
-            <button key={c} onClick={() => setCategory(c)} className={`chip ${category === c ? 'chip-active' : ''}`}>
+            <button key={c} type="button" aria-pressed={category === c} onClick={() => setCategory(c)} className={`chip ${category === c ? 'chip-active' : ''}`}>
               {RESOURCE_CATEGORIES[c].label}
             </button>
           ))}
@@ -66,7 +70,7 @@ export function ResourceExplorerDrawer({ open, onClose }: { open: boolean; onClo
                   </div>
                 </div>
                 {r.url && (
-                  <a href={r.url} target="_blank" rel="noreferrer" className="icon-btn" aria-label="Abrir">
+                  <a href={r.url} target="_blank" rel="noreferrer" className="icon-btn h-11 w-11" aria-label={`Abrir ${r.title}`}>
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 )}

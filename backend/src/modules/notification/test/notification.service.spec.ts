@@ -14,7 +14,7 @@ function makePrisma(overrides: any = {}) {
     },
     systemUser: { findMany: jest.fn().mockResolvedValue([]) },
     ...overrides,
-  } as any;
+  };
 }
 
 describe('NotificationService', () => {
@@ -28,9 +28,7 @@ describe('NotificationService', () => {
   it('getForUser pagina y cuenta unread', async () => {
     const prisma = makePrisma();
     prisma.notification.findMany.mockResolvedValue([{ id: 1 }]);
-    prisma.notification.count
-      .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(2);
+    prisma.notification.count.mockResolvedValueOnce(5).mockResolvedValueOnce(2);
     const svc = new NotificationService(prisma);
     const out = await svc.getForUser(9, { page: 2, pageSize: 10 });
     expect(out).toMatchObject({

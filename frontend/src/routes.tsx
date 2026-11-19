@@ -35,6 +35,7 @@ const CalendarPage = lazy(() => import('@pages/calendar/CalendarPage'))
 const ReportsPage = lazy(() => import('@pages/reports/ReportsPage'))
 const SettingsPage = lazy(() => import('@pages/settings/SettingsPage'))
 const NotificationsPage = lazy(() => import('@pages/notifications/NotificationsPage'))
+const MessagesPage = lazy(() => import('@pages/messages/MessagesPage'))
 const AdminPage = lazy(() => import('@pages/admin/AdminPage'))
 const NotFound = lazy(() => import('@pages/NotFound'))
 
@@ -107,6 +108,7 @@ export const router = createBrowserRouter([
       { path: 'reportes', element: <Require permission="report:manage"><ReportsPage /></Require> },
       { path: 'ajustes', element: <SettingsPage /> },
       { path: 'notificaciones', element: <NotificationsPage /> },
+      { path: 'mensajes', element: <Require permission="academic:manage"><MessagesPage /></Require> },
       { path: 'admin', element: <Require admin><AdminPage /></Require> },
       { path: '*', element: <NotFound /> },
     ],

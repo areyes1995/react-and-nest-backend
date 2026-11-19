@@ -15,16 +15,28 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import {
+  GRADING_SCALE_TYPES,
+  type GradingScaleType,
+} from '../../shared/grading.calculator';
 
 export class GradingScaleDto {
-  @IsIn(['NUMERIC_100', 'NUMERIC_1_5', 'NUMERIC_1_4', 'LITERAL'])
-  @ApiProperty({ enum: ['NUMERIC_100', 'NUMERIC_1_5', 'NUMERIC_1_4', 'LITERAL'] })
-  type!: string;
+  @IsIn(GRADING_SCALE_TYPES)
+  @ApiProperty({
+    enum: GRADING_SCALE_TYPES,
+    description:
+      'Escala declarada; las notas se normalizan a 0-100 en el modelo interno.',
+  })
+  type!: GradingScaleType;
 
   @IsNumber()
   @Min(0)
   @Max(100)
-  @ApiProperty({ default: 70 })
+  @ApiProperty({
+    default: 70,
+    description:
+      'Nota mínima expresada en la escala declarada (70 en 0-100, 3 en 1-5…).',
+  })
   passing!: number;
 }
 

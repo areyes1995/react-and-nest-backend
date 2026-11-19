@@ -44,7 +44,7 @@ export class DefaultSystemUserService implements SystemUserService {
   }
 
   async getByEmail(email: string): Promise<SystemUserDto> {
-    const normalized = this.normalizeEmail(email)
+    const normalized = this.normalizeEmail(email);
     const user = await this.systemUserRepository.getByEmail(normalized);
 
     if (!user) {
@@ -55,7 +55,7 @@ export class DefaultSystemUserService implements SystemUserService {
   }
 
   async getAuthUserByEmail(email: string): Promise<AuthUserDto> {
-    const normalized = this.normalizeEmail(email)
+    const normalized = this.normalizeEmail(email);
     const user = await this.systemUserRepository.getByEmail(normalized);
 
     if (!user) {

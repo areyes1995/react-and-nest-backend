@@ -48,7 +48,12 @@ export interface LessonPlanDraft {
   durationMinutes: number;
   strategies: string[];
   moments: LessonMoment[];
-  evaluation: { type: string; instruments: string[]; evidences: string[]; indicators: string[] };
+  evaluation: {
+    type: string;
+    instruments: string[];
+    evidences: string[];
+    indicators: string[];
+  };
   assignment: string;
 }
 
@@ -63,16 +68,26 @@ export interface LessonPlanInput {
 }
 
 function distribute(total: number): [number, number, number] {
-  const inicio = Math.max(5, Math.round(total * 0.2));
-  const cierre = Math.max(5, Math.round(total * 0.2));
-  return [inicio, Math.max(5, total - inicio - cierre), cierre];
+  const minutes = Math.max(0, Math.round(total));
+  const minimum = minutes >= 30 ? 10 : Math.min(5, Math.floor(minutes / 3));
+  const inicio = Math.max(minimum, Math.round(minutes * 0.2));
+  const cierre = Math.max(minimum, Math.round(minutes * 0.2));
+  const desarrollo = minutes - inicio - cierre;
+  return desarrollo >= minimum
+    ? [inicio, desarrollo, cierre]
+    : [minimum, minutes - minimum * 2, minimum];
 }
 
 export function lessonPlanTemplate(input: LessonPlanInput): LessonPlanDraft {
   const topic = input.topic.trim();
   const duration = input.durationMinutes ?? 45;
   const [ti, td, tc] = distribute(duration);
-  const problem = generateProblems({ topic, context: input.context, count: 1, difficulty: 'MEDIUM' })[0];
+  const problem = generateProblems({
+    topic,
+    context: input.context,
+    count: 1,
+    difficulty: 'MEDIUM',
+  })[0];
   const purpose = `Que los estudiantes comprendan y apliquen ${topic.toLowerCase()} para resolver situaciones de su entorno, comunicando sus procedimientos con lenguaje matemático.`;
 
   return {
@@ -80,7 +95,9 @@ export function lessonPlanTemplate(input: LessonPlanInput): LessonPlanDraft {
     topic,
     purpose,
     durationMinutes: duration,
-    strategies: input.strategies?.length ? input.strategies : DEFAULT_STRATEGIES,
+    strategies: input.strategies?.length
+      ? input.strategies
+      : DEFAULT_STRATEGIES,
     moments: [
       {
         moment: 'INICIO',
@@ -92,7 +109,10 @@ export function lessonPlanTemplate(input: LessonPlanInput): LessonPlanDraft {
           'Acuerdos de convivencia y normas de participación.',
         ],
         metacognition: `¿Qué sabes sobre ${topic.toLowerCase()}? ¿Dónde lo has visto en tu vida diaria?`,
-        evidences: ['Participación oral.', 'Respuestas a la situación inicial.'],
+        evidences: [
+          'Participación oral.',
+          'Respuestas a la situación inicial.',
+        ],
         techniques: ['Observación directa.', 'Preguntas orales.'],
         resources: ['Proyector', 'Pizarra', 'Presentación de la clase'],
       },
@@ -105,10 +125,20 @@ export function lessonPlanTemplate(input: LessonPlanInput): LessonPlanDraft {
           'Socialización: cada equipo explica su procedimiento y lo compara con el de otros.',
           'Práctica guiada y luego independiente con ejercicios graduados.',
         ],
-        metacognition: '¿Qué estrategia usaste para resolver el problema? ¿Cómo comprobaste tu respuesta?',
-        evidences: ['Resolución correcta de ejercicios.', 'Representaciones y procedimientos escritos.', 'Participación en la dinámica.'],
+        metacognition:
+          '¿Qué estrategia usaste para resolver el problema? ¿Cómo comprobaste tu respuesta?',
+        evidences: [
+          'Resolución correcta de ejercicios.',
+          'Representaciones y procedimientos escritos.',
+          'Participación en la dinámica.',
+        ],
         techniques: ['Lista de cotejo.', 'Rúbrica de resolución de problemas.'],
-        resources: ['Hojas de trabajo', 'Calculadora', 'Material manipulativo', 'Laboratorio matemático Educraft'],
+        resources: [
+          'Hojas de trabajo',
+          'Calculadora',
+          'Material manipulativo',
+          'Laboratorio matemático Educraft',
+        ],
       },
       {
         moment: 'CIERRE',
@@ -126,7 +156,11 @@ export function lessonPlanTemplate(input: LessonPlanInput): LessonPlanDraft {
     ],
     evaluation: {
       type: 'FORMATIVE',
-      instruments: ['Lista de cotejo', 'Rúbrica de resolución de problemas', 'Registro anecdótico'],
+      instruments: [
+        'Lista de cotejo',
+        'Rúbrica de resolución de problemas',
+        'Registro anecdótico',
+      ],
       evidences: ['Hoja de trabajo resuelta', 'Exit ticket'],
       indicators: input.indicators ?? [],
     },
@@ -144,7 +178,46 @@ export interface RubricCriterion {
   descriptors: string[];
 }
 
-export function rubricTemplate(topic: string, competence?: string, criteriaCount = 4) {
+/** Ajusta pesos (incluso los devueltos por un proveedor de IA) a exactamente 100. */
+export function normalizeRubricWeights<T extends { weight: number }>(
+  criteria: readonly T[],
+): T[] {
+  if (!criteria.length) return [];
+  const raw = criteria.map((c) =>
+    Number.isFinite(c.weight) && c.weight > 0 ? c.weight : 0,
+  );
+  const sum = raw.reduce((a, b) => a + b, 0);
+  const weights =
+    sum > 0
+      ? raw.map((value) => Math.round((value / sum) * 100))
+      : criteria.map((_, index) =>
+          index === criteria.length - 1
+            ? 100 - Math.floor(100 / criteria.length) * (criteria.length - 1)
+            : Math.floor(100 / criteria.length),
+        );
+  weights[weights.length - 1] += 100 - weights.reduce((a, b) => a + b, 0);
+  return criteria.map((criterion, index) => ({
+    ...criterion,
+    weight: weights[index],
+  }));
+}
+
+/** Normaliza el contenido de una rúbrica antes de guardarla. */
+export function normalizeInstrumentContent(
+  content: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!Array.isArray(content.criteria)) return content;
+  const criteria = content.criteria as Array<
+    Record<string, unknown> & { weight: number }
+  >;
+  return { ...content, criteria: normalizeRubricWeights(criteria) };
+}
+
+export function rubricTemplate(
+  topic: string,
+  competence?: string,
+  criteriaCount = 4,
+) {
   const t = topic.toLowerCase();
   const base: Array<[string, string[]]> = [
     [
@@ -202,13 +275,17 @@ export function rubricTemplate(topic: string, competence?: string, criteriaCount
       ],
     ],
   ];
-  const chosen = base.slice(0, Math.min(Math.max(criteriaCount, 2), base.length));
-  const weight = Math.floor(100 / chosen.length);
-  const criteria: RubricCriterion[] = chosen.map(([criterion, descriptors], i) => ({
-    criterion,
-    weight: i === chosen.length - 1 ? 100 - weight * (chosen.length - 1) : weight,
-    descriptors,
-  }));
+  const chosen = base.slice(
+    0,
+    Math.min(Math.max(criteriaCount, 2), base.length),
+  );
+  const criteria: RubricCriterion[] = normalizeRubricWeights(
+    chosen.map(([criterion, descriptors]) => ({
+      criterion,
+      descriptors,
+      weight: 100 / chosen.length,
+    })),
+  );
   return {
     title: `Rúbrica: ${topic}`,
     description: competence ? `Competencia: ${competence}` : undefined,
@@ -227,14 +304,24 @@ export function checklistTemplate(topic: string, indicators: string[] = []) {
   ];
   return {
     title: `Lista de cotejo: ${topic}`,
-    content: { items: [...new Set(items)].slice(0, 8).map((text) => ({ text })) },
+    content: {
+      items: [...new Set(items)].slice(0, 8).map((text) => ({ text })),
+    },
   };
 }
 
-export function ratingScaleTemplate(topic: string, scale: '1-4' | '1-5' | 'AD-A-B-C' = '1-4') {
+export function ratingScaleTemplate(
+  topic: string,
+  scale: '1-4' | '1-5' | 'AD-A-B-C' = '1-4',
+) {
   const levels =
     scale === '1-5'
-      ? [5, 4, 3, 2, 1].map((v) => ({ value: String(v), label: ['Siempre', 'Casi siempre', 'A veces', 'Casi nunca', 'Nunca'][5 - v] }))
+      ? [5, 4, 3, 2, 1].map((v) => ({
+          value: String(v),
+          label: ['Siempre', 'Casi siempre', 'A veces', 'Casi nunca', 'Nunca'][
+            5 - v
+          ],
+        }))
       : scale === 'AD-A-B-C'
         ? [
             { value: 'AD', label: 'Logro destacado' },
@@ -242,7 +329,10 @@ export function ratingScaleTemplate(topic: string, scale: '1-4' | '1-5' | 'AD-A-
             { value: 'B', label: 'En proceso' },
             { value: 'C', label: 'En inicio' },
           ]
-        : [4, 3, 2, 1].map((v) => ({ value: String(v), label: RUBRIC_LEVELS[4 - v] }));
+        : [4, 3, 2, 1].map((v) => ({
+            value: String(v),
+            label: RUBRIC_LEVELS[4 - v],
+          }));
   return {
     title: `Escala de valoración: ${topic}`,
     content: {
@@ -287,26 +377,53 @@ export function examTemplate(opts: {
   difficulty?: DifficultyLevel;
   context?: string;
 }): DraftQuestion[] {
-  const types = opts.types.length ? opts.types : (['MULTIPLE_CHOICE', 'TRUE_FALSE', 'PROBLEM'] as ExamQuestionType[]);
+  const types = opts.types.length
+    ? opts.types
+    : (['MULTIPLE_CHOICE', 'TRUE_FALSE', 'PROBLEM'] as ExamQuestionType[]);
   const difficulty = opts.difficulty ?? 'MEDIUM';
-  const problems = generateProblems({ topic: opts.topic, count: opts.count, difficulty, context: opts.context });
+  const problems = generateProblems({
+    topic: opts.topic,
+    count: opts.count,
+    difficulty,
+    context: opts.context,
+  });
   const rng = makeRng(Date.now());
-  return problems.map((p, i) => toQuestion(types[i % types.length], p, opts.topic, rng));
+  return problems.map((p, i) =>
+    toQuestion(types[i % types.length], p, opts.topic, rng),
+  );
 }
 
-function toQuestion(type: ExamQuestionType, p: GeneratedProblem, topic: string, rng: () => number): DraftQuestion {
-  const base = { topic, difficulty: p.difficulty, solution: p.procedure.join('\n') };
+function toQuestion(
+  type: ExamQuestionType,
+  p: GeneratedProblem,
+  topic: string,
+  rng: () => number,
+): DraftQuestion {
+  const base = {
+    topic,
+    difficulty: p.difficulty,
+    solution: p.procedure.join('\n'),
+  };
   switch (type) {
     case 'MULTIPLE_CHOICE': {
       const correct = p.numericAnswer ?? 0;
       const opts = [correct, ...distractors(correct, rng)].slice(0, 4);
       const order = opts.map((_, i) => i).sort(() => rng() - 0.5);
       const options = order.map((i) => String(opts[i]).replace('.', ','));
-      return { ...base, type, statement: p.statement, options, answer: order.indexOf(0), points: 2 };
+      return {
+        ...base,
+        type,
+        statement: p.statement,
+        options,
+        answer: order.indexOf(0),
+        points: 2,
+      };
     }
     case 'TRUE_FALSE': {
       const truthful = rng() > 0.5;
-      const shown = truthful ? p.answer : String(distractors(p.numericAnswer ?? 1, rng)[0]).replace('.', ',');
+      const shown = truthful
+        ? p.answer
+        : String(distractors(p.numericAnswer ?? 1, rng)[0]).replace('.', ',');
       return {
         ...base,
         type,
@@ -324,7 +441,13 @@ function toQuestion(type: ExamQuestionType, p: GeneratedProblem, topic: string, 
         points: 1,
       };
     case 'SHORT_ANSWER':
-      return { ...base, type, statement: p.statement, answer: p.answer, points: 2 };
+      return {
+        ...base,
+        type,
+        statement: p.statement,
+        answer: p.answer,
+        points: 2,
+      };
     case 'DEVELOPMENT':
       return {
         ...base,
@@ -334,27 +457,41 @@ function toQuestion(type: ExamQuestionType, p: GeneratedProblem, topic: string, 
         points: 4,
       };
     case 'MATCHING': {
-      const pairs = generateProblems({ topic, count: 4, difficulty: p.difficulty }).map((x) => [
-        x.latex ?? x.statement.slice(0, 80),
-        x.answer,
-      ]);
+      const pairs = generateProblems({
+        topic,
+        count: 4,
+        difficulty: p.difficulty,
+      }).map((x) => [x.latex ?? x.statement.slice(0, 80), x.answer]);
       return {
         ...base,
         type,
         statement: 'Relaciona cada planteamiento con su resultado.',
-        options: { left: pairs.map((x) => x[0]), right: [...pairs.map((x) => x[1])].sort(() => rng() - 0.5) },
+        options: {
+          left: pairs.map((x) => x[0]),
+          right: [...pairs.map((x) => x[1])].sort(() => rng() - 0.5),
+        },
         answer: pairs,
         points: 4,
       };
     }
     default:
-      return { ...base, type: 'PROBLEM', statement: p.statement, answer: p.answer, points: 5 };
+      return {
+        ...base,
+        type: 'PROBLEM',
+        statement: p.statement,
+        answer: p.answer,
+        points: 5,
+      };
   }
 }
 
 // ── Actividades interactivas ──────────────────────────
 
-export function activityTemplate(type: string, topic: string, difficulty: DifficultyLevel = 'MEDIUM') {
+export function activityTemplate(
+  type: string,
+  topic: string,
+  difficulty: DifficultyLevel = 'MEDIUM',
+) {
   const rng = makeRng(Date.now());
   const problems = generateProblems({ topic, count: 6, difficulty });
   switch (type) {
@@ -370,20 +507,47 @@ export function activityTemplate(type: string, topic: string, difficulty: Diffic
       };
     case 'MATCHING':
     case 'MEMORY':
-      return { pairs: problems.slice(0, 6).map((p) => ({ left: p.latex ?? p.statement.slice(0, 70), right: p.answer })) };
+      return {
+        pairs: problems.slice(0, 6).map((p) => ({
+          left: p.latex ?? p.statement.slice(0, 70),
+          right: p.answer,
+        })),
+      };
     case 'ORDER_STEPS': {
-      const eq = problems.find((p) => p.latex && /=/.test(p.latex) && !/\\/.test(p.latex))?.latex ?? '2x + 5 = 13';
+      const eq =
+        problems.find(
+          (p) => p.latex && /=/.test(p.latex) && !/\\/.test(p.latex),
+        )?.latex ?? '2x + 5 = 13';
       try {
         const solved = solveStepByStep(eq);
-        return { problem: eq, steps: solved.steps.map((s) => ({ text: s.explanation, latex: s.latex })) };
+        return {
+          problem: eq,
+          steps: solved.steps.map((s) => ({
+            text: s.explanation,
+            latex: s.latex,
+          })),
+        };
       } catch {
-        return { problem: problems[0].statement, steps: problems[0].procedure.map((text) => ({ text })) };
+        return {
+          problem: problems[0].statement,
+          steps: problems[0].procedure.map((text) => ({ text })),
+        };
       }
     }
     case 'COMPLETE':
-      return { items: problems.map((p) => ({ text: `${p.statement} → ____`, answer: String(p.numericAnswer ?? p.answer) })) };
+      return {
+        items: problems.map((p) => ({
+          text: `${p.statement} → ____`,
+          answer: String(p.numericAnswer ?? p.answer),
+        })),
+      };
     case 'ROULETTE':
-      return { segments: problems.map((p) => ({ prompt: p.statement, answer: p.answer })) };
+      return {
+        segments: problems.map((p) => ({
+          prompt: p.statement,
+          answer: p.answer,
+        })),
+      };
     case 'ESCAPE_ROOM': {
       const challenges = problems.slice(0, 4).map((p, i) => ({
         room: `Sala ${i + 1}`,
@@ -394,7 +558,9 @@ export function activityTemplate(type: string, topic: string, difficulty: Diffic
       return {
         story: `El laboratorio de matemática quedó cerrado. Resuelvan los retos de ${topic.toLowerCase()} para obtener el código de salida.`,
         challenges,
-        finalCode: challenges.map((c) => String(c.answer).replace(/\D/g, '').slice(-1) || '0').join(''),
+        finalCode: challenges
+          .map((c) => String(c.answer).replace(/\D/g, '').slice(-1) || '0')
+          .join(''),
       };
     }
     case 'CARTESIAN_POINTS':
@@ -406,7 +572,12 @@ export function activityTemplate(type: string, topic: string, difficulty: Diffic
         })),
       };
     case 'SOLVE_OPERATIONS':
-      return { items: problems.map((p) => ({ prompt: p.latex ?? p.statement, answer: p.answer })) };
+      return {
+        items: problems.map((p) => ({
+          prompt: p.latex ?? p.statement,
+          answer: p.answer,
+        })),
+      };
     case 'DRAG_DROP':
       return {
         categories: ['Resultado positivo', 'Resultado negativo o cero'],
@@ -419,8 +590,15 @@ export function activityTemplate(type: string, topic: string, difficulty: Diffic
       return {
         questions: problems.map((p) => {
           const correct = p.numericAnswer ?? 0;
-          const opts = [correct, ...distractors(correct, rng)].slice(0, 4).sort(() => rng() - 0.5);
-          return { prompt: p.statement, options: opts.map(String), answer: opts.indexOf(correct), seconds: 30 };
+          const opts = [correct, ...distractors(correct, rng)]
+            .slice(0, 4)
+            .sort(() => rng() - 0.5);
+          return {
+            prompt: p.statement,
+            options: opts.map(String),
+            answer: opts.indexOf(correct),
+            seconds: 30,
+          };
         }),
       };
   }
@@ -437,9 +615,16 @@ export interface StudentSnapshot {
   passing: number;
 }
 
-export function observationTemplate(type: 'CONDUCT' | 'PARTICIPATION' | 'SITUATION', s: StudentSnapshot): string {
-  const avg = s.average != null ? `con un promedio de ${s.average}` : 'sin calificaciones suficientes aún';
-  const att = s.attendanceRate != null ? ` y una asistencia de ${s.attendanceRate}%` : '';
+export function observationTemplate(
+  type: 'CONDUCT' | 'PARTICIPATION' | 'SITUATION',
+  s: StudentSnapshot,
+): string {
+  const avg =
+    s.average != null
+      ? `con un promedio de ${s.average}`
+      : 'sin calificaciones suficientes aún';
+  const att =
+    s.attendanceRate != null ? ` y una asistencia de ${s.attendanceRate}%` : '';
   if (type === 'CONDUCT') {
     return `${s.firstName} mantiene una conducta respetuosa en el aula y cumple los acuerdos de convivencia. Se recomienda continuar reforzando la responsabilidad en la entrega de sus trabajos.`;
   }
@@ -450,8 +635,12 @@ export function observationTemplate(type: 'CONDUCT' | 'PARTICIPATION' | 'SITUATI
         : 'participa cuando se le motiva; necesita acompañamiento para expresar sus procedimientos';
     return `${s.firstName} ${tone}. Se encuentra ${avg}${att}.`;
   }
-  const weak = s.weakBlocks.length ? ` Presenta dificultades en: ${s.weakBlocks.join('; ')}.` : '';
-  const strong = s.strongBlocks.length ? ` Destaca en: ${s.strongBlocks.join('; ')}.` : '';
+  const weak = s.weakBlocks.length
+    ? ` Presenta dificultades en: ${s.weakBlocks.join('; ')}.`
+    : '';
+  const strong = s.strongBlocks.length
+    ? ` Destaca en: ${s.strongBlocks.join('; ')}.`
+    : '';
   return `Situación académica de ${s.firstName}: ${avg}${att}.${strong}${weak} Se sugiere seguimiento con la familia y actividades de refuerzo.`;
 }
 
@@ -464,23 +653,28 @@ export function reinforcementStrategies(input: {
   const strategies = [
     {
       title: 'Tutoría entre pares',
-      description: 'Formar parejas con un estudiante de logro destacado y uno en riesgo para resolver retos semanales.',
+      description:
+        'Formar parejas con un estudiante de logro destacado y uno en riesgo para resolver retos semanales.',
     },
     {
       title: 'Material concreto y representaciones',
-      description: 'Usar material manipulativo, gráficos y el laboratorio matemático antes de pasar a lo simbólico.',
+      description:
+        'Usar material manipulativo, gráficos y el laboratorio matemático antes de pasar a lo simbólico.',
     },
     {
       title: 'Retroalimentación inmediata',
-      description: 'Aplicar exit tickets de 3 preguntas y devolver comentarios la clase siguiente.',
+      description:
+        'Aplicar exit tickets de 3 preguntas y devolver comentarios la clase siguiente.',
     },
     {
       title: 'Práctica diferenciada',
-      description: 'Asignar ejercicios en tres niveles (básico, intermedio, reto) según el desempeño de cada estudiante.',
+      description:
+        'Asignar ejercicios en tres niveles (básico, intermedio, reto) según el desempeño de cada estudiante.',
     },
     {
       title: 'Acompañamiento familiar',
-      description: 'Compartir el informe para padres con recomendaciones concretas para el hogar.',
+      description:
+        'Compartir el informe para padres con recomendaciones concretas para el hogar.',
     },
   ];
   for (const b of input.weakBlocks) {
@@ -503,13 +697,37 @@ export function reinforcementStrategies(input: {
 
 // ── Programación curricular ───────────────────────────
 
-export function programTemplate(opts: {
+export interface ProgramTemplateInput {
   gradeName: string;
   concepts: Array<{ id: number; block: string | null; description: string }>;
   periods: Array<{ number: number; startDate: string; endDate: string }>;
-}) {
+  competences?: Array<
+    { id?: number; name?: string; description?: string } | string
+  >;
+  indicators?: Array<
+    { id?: number; description?: string; text?: string } | string
+  >;
+  evaluationCriteria?: string[];
+}
+
+export function programTemplate(opts: ProgramTemplateInput) {
+  const competenceIds = (opts.competences ?? [])
+    .map((item) => (typeof item === 'string' ? undefined : item.id))
+    .filter((id): id is number => typeof id === 'number');
+  const indicatorIds = (opts.indicators ?? [])
+    .map((item) => (typeof item === 'string' ? undefined : item.id))
+    .filter((id): id is number => typeof id === 'number');
+  const unitCount = Math.max(1, opts.concepts.length);
   const units = opts.concepts.map((c, i) => {
-    const period = opts.periods[Math.min(opts.periods.length - 1, Math.floor((i * opts.periods.length) / Math.max(1, opts.concepts.length)))];
+    const period =
+      opts.periods[
+        Math.min(
+          opts.periods.length - 1,
+          Math.floor((i * opts.periods.length) / unitCount),
+        )
+      ];
+    const assigned = <T>(ids: number[]) =>
+      ids.filter((_, k) => k % unitCount === i % unitCount);
     return {
       title: `Unidad ${i + 1}: ${c.block ?? 'Contenidos'}`,
       description: c.description,
@@ -517,26 +735,55 @@ export function programTemplate(opts: {
       period: period?.number ?? null,
       startDate: period?.startDate ?? null,
       endDate: period?.endDate ?? null,
-      evidences: ['Resolución de situaciones problema', 'Proyecto o producto final de la unidad'],
-      evaluationCriteria: ['Comprensión conceptual', 'Resolución de problemas', 'Comunicación matemática'],
+      evidences: [
+        'Resolución de situaciones problema',
+        'Proyecto o producto final de la unidad',
+      ],
+      evaluationCriteria: [...(opts.evaluationCriteria ?? [])],
+      specificCompetenceIds: assigned(competenceIds),
+      indicatorIds: assigned(indicatorIds),
     };
   });
-  return { title: `Programación anual de Matemática — ${opts.gradeName}`, units };
+  return {
+    title: `Programación anual de Matemática — ${opts.gradeName}`,
+    units,
+  };
 }
 
 // ── Tutor virtual (respaldo sin proveedor) ─────────────
 
 const COMMON_ERRORS: Array<[RegExp, string]> = [
-  [/fracc/, 'Un error frecuente con fracciones es sumar numeradores y denominadores por separado (1/2 + 1/3 = 2/5). Muestra con material concreto o con una pizza dividida que primero hay que buscar un denominador común: 1/2 + 1/3 = 3/6 + 2/6 = 5/6.'],
-  [/signo|entero|negativ/, 'Con enteros, los estudiantes suelen confundir la regla de los signos de la multiplicación con la de la suma. Usa la recta numérica para la suma y una tabla de patrones (3·2, 3·1, 3·0, 3·(−1)…) para descubrir la regla del producto.'],
-  [/distribut|par[eé]ntesis/, 'Al eliminar paréntesis se olvida multiplicar el segundo término: 3(x + 2) = 3x + 2. Pide que dibujen flechas desde el factor hacia cada término y verifiquen sustituyendo un valor.'],
-  [/ecuaci|despej/, 'Al despejar, muchos "pasan" términos sin cambiar la operación o solo modifican un lado. Insiste en la balanza: lo que se hace a un lado se hace al otro, y verifiquen siempre sustituyendo la solución.'],
-  [/potenc|exponent/, 'Es común creer que (a + b)² = a² + b². Usa un cuadrado de lado (a + b) dividido en áreas para mostrar el término 2ab.'],
+  [
+    /fracc/,
+    'Un error frecuente con fracciones es sumar numeradores y denominadores por separado (1/2 + 1/3 = 2/5). Muestra con material concreto o con una pizza dividida que primero hay que buscar un denominador común: 1/2 + 1/3 = 3/6 + 2/6 = 5/6.',
+  ],
+  [
+    /signo|entero|negativ/,
+    'Con enteros, los estudiantes suelen confundir la regla de los signos de la multiplicación con la de la suma. Usa la recta numérica para la suma y una tabla de patrones (3·2, 3·1, 3·0, 3·(−1)…) para descubrir la regla del producto.',
+  ],
+  [
+    /distribut|par[eé]ntesis/,
+    'Al eliminar paréntesis se olvida multiplicar el segundo término: 3(x + 2) = 3x + 2. Pide que dibujen flechas desde el factor hacia cada término y verifiquen sustituyendo un valor.',
+  ],
+  [
+    /ecuaci|despej/,
+    'Al despejar, muchos "pasan" términos sin cambiar la operación o solo modifican un lado. Insiste en la balanza: lo que se hace a un lado se hace al otro, y verifiquen siempre sustituyendo la solución.',
+  ],
+  [
+    /potenc|exponent/,
+    'Es común creer que (a + b)² = a² + b². Usa un cuadrado de lado (a + b) dividido en áreas para mostrar el término 2ab.',
+  ],
 ];
 
-export function tutorFallback(message: string, context: { teacherName?: string; sections?: string[] }): string {
+export function tutorFallback(
+  message: string,
+  context: { teacherName?: string; sections?: string[] },
+): string {
   const m = message.toLowerCase();
-  const topicMatch = /(?:enseñar|explicar|sobre|de)\s+(?:las?\s+|los?\s+|el\s+)?([a-záéíóúñ\s]{4,40})\??$/i.exec(message.trim());
+  const topicMatch =
+    /(?:enseñar|explicar|sobre|de)\s+(?:las?\s+|los?\s+|el\s+)?([a-záéíóúñ\s]{4,40})\??$/i.exec(
+      message.trim(),
+    );
   const topic = topicMatch?.[1]?.trim() ?? 'el tema';
 
   if (/error|equivoca|confund/.test(m)) {
@@ -549,7 +796,10 @@ export function tutorFallback(message: string, context: { teacherName?: string; 
     const r = rubricTemplate(topic);
     return [
       `Te propongo esta rúbrica para ${topic}:`,
-      ...r.content.criteria.map((c) => `• ${c.criterion} (${c.weight}%): Excelente — ${c.descriptors[0]}`),
+      ...r.content.criteria.map(
+        (c) =>
+          `• ${c.criterion} (${c.weight}%): Excelente — ${c.descriptors[0]}`,
+      ),
       'Puedes editarla y guardarla desde Evaluación → Rúbricas.',
     ].join('\n');
   }
@@ -577,7 +827,11 @@ export function tutorFallback(message: string, context: { teacherName?: string; 
   if (/\d\s*[a-z]?\s*[+\-*/=]/.test(m)) {
     try {
       const s = solveStepByStep(message.replace(/^[^0-9a-z(]*/i, ''));
-      return [`Solución paso a paso:`, ...s.steps.map((st) => `• ${st.explanation} → ${st.latex}`), `Respuesta: ${s.answer}`].join('\n');
+      return [
+        `Solución paso a paso:`,
+        ...s.steps.map((st) => `• ${st.explanation} → ${st.latex}`),
+        `Respuesta: ${s.answer}`,
+      ].join('\n');
     } catch {
       // continúa con la respuesta general
     }

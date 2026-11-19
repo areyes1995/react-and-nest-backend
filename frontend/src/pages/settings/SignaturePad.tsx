@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Eraser, Upload } from 'lucide-react'
 import { Button } from '@components/ui'
 
@@ -7,6 +7,8 @@ export function SignaturePad({ value, onChange }: { value: string | null; onChan
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
   const [dirty, setDirty] = useState(false)
+  const [typed, setTyped] = useState('')
+  const typedId = useId()
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export function SignaturePad({ value, onChange }: { value: string | null; onChan
 
   const start = (e: React.PointerEvent<HTMLCanvasElement>) => {
     drawing.current = true
+    setTyped('')
     e.currentTarget.setPointerCapture(e.pointerId)
     const ctx = e.currentTarget.getContext('2d')!
     const { x, y } = pos(e)
@@ -56,8 +59,24 @@ export function SignaturePad({ value, onChange }: { value: string | null; onChan
   const clear = () => {
     const canvas = canvasRef.current!
     canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height)
+    setTyped('')
     setDirty(false)
     onChange(null)
+  }
+
+  const applyTyped = () => {
+    const name = typed.trim()
+    if (!name) return
+    const canvas = canvasRef.current!
+    const ctx = canvas.getContext('2d')!
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#1e1b4b'
+    ctx.font = 'italic 44px "Plus Jakarta Sans", cursive'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2, canvas.width - 24)
+    setDirty(true)
+    onChange(canvas.toDataURL('image/png'))
   }
 
   const upload = (file: File) => {
@@ -78,16 +97,18 @@ export function SignaturePad({ value, onChange }: { value: string | null; onChan
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <canvas
         ref={canvasRef}
         width={600}
         height={180}
+        role="img"
+        aria-label="Área de dibujo para la firma. También puedes escribir tu firma más abajo."
         onPointerDown={start}
         onPointerMove={move}
         onPointerUp={end}
         onPointerLeave={end}
-        className="h-36 w-full touch-none rounded-2xl border-2 border-dashed border-violet-200 bg-white dark:border-violet-900"
+        className="h-36 w-full touch-none rounded-2xl border-2 border-dashed border-[var(--signature-border)] bg-[var(--signature-bg)]"
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Button size="sm" variant="secondary" icon={<Eraser className="h-3.5 w-3.5" />} onClick={clear}>
@@ -96,8 +117,34 @@ export function SignaturePad({ value, onChange }: { value: string | null; onChan
         <Button size="sm" variant="secondary" icon={<Upload className="h-3.5 w-3.5" />} onClick={() => fileRef.current?.click()}>
           Subir imagen
         </Button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-        <span className="text-xs text-ink-3">{dirty ? 'Firma modificada (guarda los cambios).' : 'Dibuja tu firma con el ratón o el dedo.'}</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          aria-label="Subir imagen de firma"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
+        />
+        <span aria-live="polite" className="text-xs text-ink-3">
+          {dirty ? 'Firma modificada (guarda los cambios).' : 'Dibuja tu firma con el ratón o el dedo.'}
+        </span>
+      </div>
+      <div className="mt-3 border-t border-line pt-3">
+        <label htmlFor={typedId} className="label">
+          Firma escrita (alternativa con teclado)
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            id={typedId}
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder="Escribe tu nombre completo"
+            className="input min-w-0 flex-1"
+          />
+          <Button size="sm" variant="soft" disabled={!typed.trim()} onClick={applyTyped}>
+            Usar firma escrita
+          </Button>
+        </div>
       </div>
     </div>
   )

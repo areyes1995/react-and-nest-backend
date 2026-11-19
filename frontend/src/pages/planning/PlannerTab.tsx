@@ -5,7 +5,7 @@ import { planningApi, schoolYearApi } from '@services/educraft'
 import type { LearningUnit, LessonPlan, SchoolYear, Section } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
 import { Badge, Button, Card, CardHeader, EmptyState, Select, Spinner, Tabs } from '@components/ui'
-import { CurriculumPicker, type CurriculumSelection } from '@/features/planning/CurriculumPicker'
+import { CurriculumPicker, EMPTY_CURRICULUM_SELECTION, type CurriculumSelection } from '@/features/planning/CurriculumPicker'
 import { PLAN_STATUS, UNIT_KINDS } from '@lib/labels'
 import { MONTHS, WEEKDAYS, addDays, formatDate, parseDay, sectionLabel, toDay, today } from '@lib/format'
 import { cn } from '@lib/cn'
@@ -32,7 +32,7 @@ export function PlannerTab({ sections, initialView }: { sections: Section[]; ini
   const [ref, setRef] = useState(today())
   const [gradeFilter, setGradeFilter] = useState<number | ''>('')
   const [dragOver, setDragOver] = useState<string | null>(null)
-  const [selection, setSelection] = useState<CurriculumSelection>({ specificCompetenceIds: [], indicatorIds: [], contentIds: [] })
+  const [selection, setSelection] = useState<CurriculumSelection>(EMPTY_CURRICULUM_SELECTION)
 
   const load = async () => {
     try {
@@ -97,12 +97,22 @@ export function PlannerTab({ sections, initialView }: { sections: Section[]; ini
   }
 
   const addCurriculum = async (target: { kind: 'unit' | 'plan'; id: number }, raw: string) => {
-    const item = JSON.parse(raw) as { kind: 'competence' | 'indicator' | 'content'; id: number; text: string }
-    const key = item.kind === 'competence' ? 'specificCompetenceIds' : item.kind === 'indicator' ? 'indicatorIds' : 'contentIds'
+    const item = JSON.parse(raw) as { kind: 'competence' | 'capacity' | 'performance' | 'indicator' | 'axis' | 'content'; id: number; text: string }
+    const keys = {
+      competence: 'specificCompetenceIds',
+      capacity: 'capacityIds',
+      performance: 'performanceIds',
+      indicator: 'indicatorIds',
+      axis: 'axisIds',
+      content: 'contentIds',
+    } as const
+    const key = keys[item.kind] ?? 'contentIds'
     if (target.kind === 'unit') {
       const unit = units.find((u) => u.id === target.id)
-      if (!unit || unit[key].includes(item.id)) return
-      const next = [...unit[key], item.id]
+      if (!unit) return
+      const current = unit[key] ?? []
+      if (current.includes(item.id)) return
+      const next = [...current, item.id]
       setUnits((list) => list.map((u) => (u.id === unit.id ? { ...u, [key]: next } : u)))
       await planningApi.updateUnit(unit.id, { [key]: next })
     } else {
@@ -211,7 +221,7 @@ export function PlannerTab({ sections, initialView }: { sections: Section[]; ini
   return (
     <div className="grid gap-4 xl:grid-cols-[19rem_1fr]">
       <Card className="card-pad h-fit xl:sticky xl:top-0">
-        <CardHeader title="Adecuación curricular" subtitle="Arrastra competencias, indicadores y contenidos a unidades o sesiones" />
+        <CardHeader title="Adecuación curricular" subtitle="Arrastra ejes, competencias, capacidades, desempeños, indicadores y contenidos a unidades o sesiones" />
         <Select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value ? Number(e.target.value) : '')} placeholder="Todos los grados" options={gradeOptions} className="mb-3" />
         <CurriculumPicker gradeId={gradeId} value={selection} onChange={setSelection} compact />
       </Card>

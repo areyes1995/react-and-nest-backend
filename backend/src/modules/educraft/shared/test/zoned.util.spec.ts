@@ -8,7 +8,13 @@ describe('zoned.util', () => {
   });
 
   it('convierte un instante UTC a la hora de Santo Domingo (UTC-4)', () => {
-    expect(localParts(new Date('2025-05-15T15:30:00Z'))).toEqual({ date: '2025-05-15', time: '11:30' });
-    expect(localParts(new Date('2025-05-16T02:00:00Z'))).toEqual({ date: '2025-05-15', time: '22:00' });
+    expect(localParts(new Date('2025-05-15T15:30:00Z'))).toEqual({
+      date: '2025-05-15',
+      time: '11:30',
+    });
+    expect(localParts(new Date('2025-05-16T02:00:00Z'))).toEqual({
+      date: '2025-05-15',
+      time: '22:00',
+    });
   });
 });

@@ -119,7 +119,10 @@ export class AuthController {
 
   @Post('request-password-reset')
   @Public()
-  @ApiResponse({ status: 200, description: 'Password reset email sent if user exists.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset email sent if user exists.',
+  })
   async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
     await this.authService.requestPasswordReset(dto);
   }

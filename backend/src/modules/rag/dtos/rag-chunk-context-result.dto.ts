@@ -11,7 +11,10 @@ export class RagContextChunkDto {
   @ApiProperty({ description: 'Contenido textual completo del chunk.' })
   content: string;
 
-  @ApiProperty({ required: false, description: 'Título de la sección del chunk.' })
+  @ApiProperty({
+    required: false,
+    description: 'Título de la sección del chunk.',
+  })
   sectionTitle: string | null;
 
   @ApiProperty({ required: false, description: 'Página inicial del chunk.' })

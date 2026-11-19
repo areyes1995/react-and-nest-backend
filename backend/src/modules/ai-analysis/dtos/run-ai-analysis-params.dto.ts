@@ -1,6 +1,6 @@
-import { AiAnalysisType } from "@prisma/client";
-import { AiPromptDto } from "./ai-prompt.dto";
-import { ZodType } from "zod";
+import { AiAnalysisType } from '@prisma/client';
+import { AiPromptDto } from './ai-prompt.dto';
+import { ZodType } from 'zod';
 
 export interface RunAiAnalysisParams<T> {
   projectId?: number | bigint;

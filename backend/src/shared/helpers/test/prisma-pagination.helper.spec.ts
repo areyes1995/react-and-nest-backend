@@ -35,21 +35,21 @@ describe('prisma-pagination.helper', () => {
     });
 
     it('boolean → true con "true" o true', () => {
-      expect(
-        buildWhereFromFilters({ b: 'true' }, { b: 'boolean' }),
-      ).toEqual({ b: true });
+      expect(buildWhereFromFilters({ b: 'true' }, { b: 'boolean' })).toEqual({
+        b: true,
+      });
       expect(buildWhereFromFilters({ b: true }, { b: 'boolean' })).toEqual({
         b: true,
       });
-      expect(
-        buildWhereFromFilters({ b: 'false' }, { b: 'boolean' }),
-      ).toEqual({ b: false });
+      expect(buildWhereFromFilters({ b: 'false' }, { b: 'boolean' })).toEqual({
+        b: false,
+      });
     });
 
     it('enum → valor directo', () => {
-      expect(
-        buildWhereFromFilters({ s: 'ACTIVO' }, { s: 'enum' }),
-      ).toEqual({ s: 'ACTIVO' });
+      expect(buildWhereFromFilters({ s: 'ACTIVO' }, { s: 'enum' })).toEqual({
+        s: 'ACTIVO',
+      });
     });
 
     it('transformer → merge del fragmento', () => {
@@ -61,9 +61,7 @@ describe('prisma-pagination.helper', () => {
     });
 
     it('transformer que retorna null no mezcla nada', () => {
-      expect(
-        buildWhereFromFilters({ x: '1' }, { x: () => null }),
-      ).toEqual({});
+      expect(buildWhereFromFilters({ x: '1' }, { x: () => null })).toEqual({});
     });
   });
 

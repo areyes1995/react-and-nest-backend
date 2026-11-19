@@ -32,6 +32,17 @@
   --soft-red: #fee4e4;
   --soft-sky: #e0f4fd;
 
+  --status-green: #15803d;
+  --status-blue: #1d4ed8;
+  --status-yellow: #b45309;
+  --status-red: #dc2626;
+  --chart-purple: #7c3aed;
+  --chart-pink: #db2777;
+  --chart-pink-soft: #c026d3;
+  --chart-green: #16a34a;
+  --signature-bg: #ffffff;
+  --signature-border: #c4b5fd;
+
   --brand-gradient: linear-gradient(90deg, #ec4899 0%, #a855f7 100%);
   --shadow-card: 0 1px 2px rgba(34, 28, 69, 0.04), 0 6px 24px rgba(139, 92, 246, 0.07);
   --shadow-pop: 0 18px 50px rgba(76, 29, 149, 0.16);
@@ -58,6 +69,17 @@
   --soft-green: rgba(34, 197, 94, 0.16);
   --soft-red: rgba(239, 68, 68, 0.18);
   --soft-sky: rgba(14, 165, 233, 0.16);
+
+  --status-green: #4ade80;
+  --status-blue: #60a5fa;
+  --status-yellow: #fbbf24;
+  --status-red: #f87171;
+  --chart-purple: #a78bfa;
+  --chart-pink: #f472b6;
+  --chart-pink-soft: #f0abfc;
+  --chart-green: #4ade80;
+  --signature-bg: #e9e5f5;
+  --signature-border: #7c6fb0;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px rgba(0, 0, 0, 0.25);
   --shadow-pop: 0 18px 50px rgba(0, 0, 0, 0.5);
@@ -113,10 +135,10 @@
 
   /* ── Botones ─────────────────────────────────── */
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 select-none items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+    @apply min-h-11 px-3 py-1.5 text-xs;
   }
   .btn-lg {
     @apply px-5 py-2.5 text-[0.95rem];
@@ -138,12 +160,12 @@
     @apply bg-soft-red text-brand-red hover:brightness-95;
   }
   .icon-btn {
-    @apply inline-grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-2 transition hover:bg-surface-3 hover:text-ink;
+    @apply inline-grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-2 transition hover:bg-surface-3 hover:text-ink;
   }
 
   /* ── Formularios ─────────────────────────────── */
   .input {
-    @apply w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 transition focus:border-brand-purple focus:outline-none focus:ring-4 focus:ring-violet-500/10 disabled:opacity-60;
+    @apply min-h-11 w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 transition focus:border-brand-purple focus:outline-none focus:ring-4 focus:ring-violet-500/10 disabled:opacity-60;
   }
   .label {
     @apply mb-1 block text-xs font-semibold text-ink-2;
@@ -157,7 +179,7 @@
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold;
   }
   .chip {
-    @apply inline-flex cursor-pointer select-none items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink-2 transition hover:border-violet-300;
+    @apply inline-flex min-h-11 cursor-pointer select-none items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink-2 transition hover:border-violet-300;
   }
   .chip-active {
     @apply border-transparent bg-soft-purple text-brand-purple;
@@ -213,5 +235,13 @@
   .print-area {
     position: absolute;
     inset: 0;
+    background: #fff;
+    color: #000;
+  }
+  html[data-theme='dark'] body,
+  html[data-theme='dark'] .print-area,
+  html[data-theme='dark'] .print-area * {
+    background: #fff;
+    color: #000;
   }
 }

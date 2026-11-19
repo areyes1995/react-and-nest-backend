@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarX, ClipboardList, Sparkles, TrendingDown, TriangleAlert } from 'lucide-react'
 import { reportApi } from '@services/educraft'
@@ -18,7 +18,13 @@ const KINDS: Array<{ kind: Alert['kind']; label: string; icon: React.ReactNode; 
   { kind: 'PENDING_DELIVERY', label: 'Actividades sin entregar', icon: <ClipboardList className="h-5 w-5" />, tone: 'pink' },
 ]
 
-const TEXT_TONE: Record<string, string> = { green: 'text-emerald-600', blue: 'text-blue-600', yellow: 'text-amber-600', red: 'text-red-600', gray: 'text-ink-3' }
+const TEXT_TONE: Record<string, string> = {
+  green: 'text-emerald-700 dark:text-emerald-300',
+  blue: 'text-blue-700 dark:text-blue-300',
+  yellow: 'text-amber-700 dark:text-amber-300',
+  red: 'text-red-700 dark:text-red-300',
+  gray: 'text-ink-3',
+}
 
 export default function TrackingPage() {
   const [params] = useSearchParams()
@@ -29,6 +35,7 @@ export default function TrackingPage() {
   const current = sectionId || sections[0]?.id
   const perf = useAsync(() => (current ? reportApi.performance(Number(current)) : Promise.resolve(null)), [current])
   const [active, setActive] = useState<Alert | null>(null)
+  const sectionSelectId = useId()
 
   const counts = useMemo(() => {
     const map: Partial<Record<Alert['kind'], number>> = {}
@@ -49,18 +56,18 @@ export default function TrackingPage() {
       <PageHeader title="Seguimiento del estudiante" subtitle="Alertas de bajo rendimiento, asistencia y entregas, con recomendaciones para intervenir a tiempo" />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {KINDS.map((k) => (
-          <div key={k.kind} className={cn('rounded-card p-4', TONE_CLASSES[k.tone])}>
-            <div className="flex items-center justify-between">
+          <div key={k.kind} className={cn('min-w-0 rounded-card p-4', TONE_CLASSES[k.tone])}>
+            <div className="flex items-center justify-between gap-2">
               {k.icon}
               <span className="text-3xl font-extrabold">{counts[k.kind] ?? 0}</span>
             </div>
-            <p className="mt-2 text-sm font-bold">{k.label}</p>
+            <p className="mt-2 break-words text-sm font-bold">{k.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[24rem_1fr]">
-        <Card className="card-pad h-fit">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
+        <Card className="card-pad h-fit min-w-0">
           <CardHeader title="Alertas activas" />
           {alerts.loading && !alerts.data ? (
             <Spinner />
@@ -70,9 +77,9 @@ export default function TrackingPage() {
             <ul className="space-y-2">
               {alerts.data.map((a, i) => (
                 <li key={i}>
-                  <button onClick={() => setActive(a)} className="w-full rounded-2xl border border-line p-3 text-left transition hover:shadow-card">
+                  <button type="button" onClick={() => setActive(a)} className="min-h-11 w-full min-w-0 rounded-2xl border border-line p-3 text-left transition hover:shadow-card">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-bold text-ink">{a.title}</p>
+                      <p className="min-w-0 break-words text-sm font-bold text-ink">{a.title}</p>
                       <Badge tone={a.severity === 'critical' ? 'red' : a.severity === 'warning' ? 'orange' : 'blue'}>{a.severity === 'critical' ? 'Crítica' : a.severity === 'warning' ? 'Atención' : 'Info'}</Badge>
                     </div>
                     <p className="mt-0.5 text-xs text-ink-3">{a.description}</p>
@@ -84,11 +91,18 @@ export default function TrackingPage() {
           )}
         </Card>
 
-        <Card className="card-pad">
+        <Card className="card-pad min-w-0">
           <CardHeader
             title="Dashboard de analítica estudiantil"
             subtitle={perf.data ? `${sectionLabel(perf.data.section.grade, perf.data.section.name)} · promedio ${formatScore(perf.data.summary.average, 1)} · asistencia ${formatPercent(perf.data.summary.attendanceRate)}` : undefined}
-            action={<Select value={current ?? ''} onChange={(e) => setSectionId(Number(e.target.value))} options={sections.map((s) => ({ value: s.id, label: sectionLabel(s.grade.name, s.name) }))} className="w-auto" />}
+            action={
+              <>
+                <label htmlFor={sectionSelectId} className="sr-only">
+                  Sección
+                </label>
+                <Select id={sectionSelectId} value={current ?? ''} onChange={(e) => setSectionId(Number(e.target.value))} options={sections.map((s) => ({ value: s.id, label: sectionLabel(s.grade.name, s.name) }))} className="w-auto max-w-[45vw]" />
+              </>
+            }
           />
           {!perf.data ? (
             <Spinner />
@@ -108,8 +122,8 @@ export default function TrackingPage() {
                   </div>
                 ))}
               </div>
-              <div className="max-h-[55vh] overflow-auto">
-                <table className="table">
+              <div className="max-h-[55vh] min-w-0 overflow-auto">
+                <table className="table min-w-[720px]">
                   <thead>
                     <tr>
                       <th>Estudiante</th>
@@ -126,8 +140,8 @@ export default function TrackingPage() {
                   <tbody>
                     {rows.map((r) => (
                       <tr key={r.student.id}>
-                        <td>
-                          <Link to={`/app/estudiantes/${r.student.id}`} className="font-semibold text-ink hover:text-brand-purple">
+                        <td className="min-w-0">
+                          <Link to={`/app/estudiantes/${r.student.id}`} className="block min-w-0 break-words font-semibold text-ink hover:text-brand-purple">
                             {r.student.lastName}, {r.student.firstName}
                           </Link>
                         </td>
@@ -144,9 +158,10 @@ export default function TrackingPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className="mt-3 flex flex-wrap justify-end">
                 <Button
                   variant="soft"
+                  className="max-w-full whitespace-normal text-left"
                   icon={<Sparkles className="h-4 w-4" />}
                   onClick={() =>
                     setActive({

@@ -13,8 +13,17 @@ import {
   MaxLength,
   Min,
   MinLength,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
-import { ActivityType, Difficulty, ObservationType, QuestionType } from '@prisma/client';
+import {
+  ActivityType,
+  Difficulty,
+  ObservationType,
+  QuestionType,
+} from '@prisma/client';
 
 export class GenerateLessonPlanDto {
   @Type(() => Number)
@@ -80,7 +89,10 @@ export class GenerateLessonPlanDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
-  @ApiProperty({ required: false, description: 'Contexto (salud, finanzas, medio ambiente…)' })
+  @ApiProperty({
+    required: false,
+    description: 'Contexto (salud, finanzas, medio ambiente…)',
+  })
   context?: string;
 
   @IsOptional()
@@ -97,14 +109,29 @@ export class GenerateProblemsDto {
   topic!: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @ApiProperty({ required: false })
   gradeId?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    description: 'Competencia fundamental seleccionada para la alineación.',
+  })
   fundamentalId?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({
+    required: false,
+    type: [Number],
+    description: 'Indicadores de logro seleccionados para la alineación.',
+  })
+  indicatorIds?: number[];
 
   @IsOptional()
   @IsString()
@@ -215,7 +242,10 @@ export class GenerateExamDto {
 
   @IsOptional()
   @IsBoolean()
-  @ApiProperty({ required: false, description: 'Guardar preguntas en el banco y crear el examen' })
+  @ApiProperty({
+    required: false,
+    description: 'Guardar preguntas en el banco y crear el examen',
+  })
   save?: boolean;
 }
 
@@ -246,6 +276,18 @@ export class GenerateActivityDto {
   save?: boolean;
 }
 
+@ValidatorConstraint({ name: 'confirmSaveRequiresSave', async: false })
+class ConfirmSaveRequiresSaveConstraint implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const dto = args.object as GenerateObservationDto;
+    return dto.confirmSave !== true || dto.save === true;
+  }
+
+  defaultMessage(): string {
+    return 'confirmSave solo puede enviarse cuando save es true';
+  }
+}
+
 export class GenerateObservationDto {
   @IsInt()
   @ApiProperty()
@@ -257,8 +299,21 @@ export class GenerateObservationDto {
 
   @IsOptional()
   @IsBoolean()
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    description: 'Solicita guardar la observación como borrador para revisión.',
+  })
   save?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Validate(ConfirmSaveRequiresSaveConstraint)
+  @ApiProperty({
+    required: false,
+    description:
+      'Confirmación explícita del docente tras revisar el borrador; requiere save=true.',
+  })
+  confirmSave?: boolean;
 }
 
 export class GenerateStrategiesDto {
@@ -304,6 +359,42 @@ export class GenerateProgramDto {
   @IsBoolean()
   @ApiProperty({ required: false })
   save?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  specificCompetenceIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  indicatorIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  contentIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  axisIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  capacityIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  performanceIds?: number[];
 }
 
 export class TutorMessageDto {
@@ -335,7 +426,10 @@ export class DocumentToSessionDto {
   @IsOptional()
   @IsString()
   @MaxLength(60000)
-  @ApiProperty({ required: false, description: 'Texto del documento (si no se sube archivo)' })
+  @ApiProperty({
+    required: false,
+    description: 'Texto del documento (si no se sube archivo)',
+  })
   text?: string;
 
   @IsOptional()

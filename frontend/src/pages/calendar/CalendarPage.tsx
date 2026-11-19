@@ -2,17 +2,34 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CalendarArrowDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { calendarApi, type EventInput } from '@services/educraft'
+import { getBlob } from '@services/api'
 import type { AgendaItem, CalendarEventType } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
 import { useSections } from '@hooks/useCatalog'
 import { Button, Card, Checkbox, EmptyState, Field, Input, Modal, PageHeader, Select, Spinner, Tabs, Textarea } from '@components/ui'
 import { EventDetailModal } from '@/features/common/EventDetailModal'
-import { exportIcs } from '@lib/exporters'
 import { EVENT_TYPES } from '@lib/labels'
 import { MONTHS, WEEKDAYS, addDays, formatDate, formatTime, parseDay, sectionLabel, toDay, today } from '@lib/format'
 import { cn } from '@lib/cn'
 
 type View = 'mes' | 'semana' | 'agenda'
+type RecurrenceFreq = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+
+type EventDraft = EventInput & {
+  date: string
+  start: string
+  end: string
+  recurrenceFreq?: RecurrenceFreq | null
+  recurrenceInterval?: number
+  recurrenceUntil?: string
+}
+
+const RECURRENCE_OPTIONS = [
+  { value: 'DAILY', label: 'Cada día' },
+  { value: 'WEEKLY', label: 'Cada semana' },
+  { value: 'MONTHLY', label: 'Cada mes' },
+  { value: 'YEARLY', label: 'Cada año' },
+]
 
 const mondayOf = (day: string) => addDays(day, -((parseDay(day).getDay() + 6) % 7))
 
@@ -26,7 +43,7 @@ export default function CalendarPage() {
   const [hidden, setHidden] = useState<CalendarEventType[]>([])
   const [showClasses, setShowClasses] = useState(view === 'semana')
   const [active, setActive] = useState<AgendaItem | null>(null)
-  const [creating, setCreating] = useState<(EventInput & { date: string; start: string; end: string }) | null>(null)
+  const [creating, setCreating] = useState<EventDraft | null>(null)
 
   const range = useMemo(() => {
     if (view === 'semana') {
@@ -61,15 +78,27 @@ export default function CalendarPage() {
     } else setRef(addDays(ref, dir * (view === 'semana' ? 7 : 30)))
   }
 
-  const openNew = (date = today()) => setCreating({ type: 'REMINDER', title: '', startAt: '', date, start: '08:00', end: '09:00', allDay: true })
+  const openNew = (date = today()) => setCreating({ type: 'REMINDER', title: '', startAt: '', date, start: '08:00', end: '09:00', allDay: true, recurrenceInterval: 1 })
 
   const save = async () => {
     if (!creating || !creating.title.trim()) return
     const startAt = creating.allDay ? `${creating.date}T00:00:00.000Z` : new Date(`${creating.date}T${creating.start}:00`).toISOString()
     const endAt = creating.allDay ? undefined : new Date(`${creating.date}T${creating.end}:00`).toISOString()
+    const body = {
+      type: creating.type,
+      title: creating.title,
+      description: creating.description || undefined,
+      startAt,
+      endAt,
+      allDay: creating.allDay,
+      sectionId: creating.sectionId || undefined,
+      recurrenceFreq: creating.recurrenceFreq || undefined,
+      recurrenceInterval: creating.recurrenceFreq ? creating.recurrenceInterval || 1 : undefined,
+      recurrenceUntil: creating.recurrenceFreq && creating.recurrenceUntil ? creating.recurrenceUntil : undefined,
+    }
     try {
-      await calendarApi.create({ type: creating.type, title: creating.title, description: creating.description || undefined, startAt, endAt, allDay: creating.allDay, sectionId: creating.sectionId || undefined })
-      success('Evento agregado')
+      await calendarApi.create(body)
+      success('Evento agregado', creating.recurrenceFreq ? 'El evento se repetirá según la recurrencia indicada.' : undefined)
       setCreating(null)
       load()
     } catch (err) {
@@ -81,12 +110,18 @@ export default function CalendarPage() {
     const first = parseDay(ref)
     const from = toDay(new Date(first.getFullYear(), first.getMonth(), 1))
     const to = toDay(new Date(first.getFullYear(), first.getMonth() + 3, 0))
-    const all = await calendarApi.agenda(from, to, true)
-    exportIcs(
-      all.map((i) => ({ uid: i.key, title: i.title, description: [EVENT_TYPES[i.type].label, i.section ? sectionLabel(i.section.grade, i.section.name) : '', i.description ?? ''].filter(Boolean).join(' · '), date: i.date, startTime: i.startTime, endTime: i.endTime })),
-      `agenda-educraft-${from}`,
-    )
-    success('Agenda exportada', 'Importa el archivo .ics en Google Calendar, Outlook o tu teléfono (3 meses).')
+    try {
+      const blob = await getBlob(`/calendar/export.ics?from=${from}&to=${to}`)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `agenda-educraft-${from}.ics`
+      link.click()
+      URL.revokeObjectURL(url)
+      success('Agenda exportada', 'Importa el archivo .ics en Google Calendar, Outlook o tu teléfono (3 meses).')
+    } catch (err) {
+      error('No se pudo exportar', (err as Error).message)
+    }
   }
 
   const title =
@@ -261,6 +296,32 @@ export default function CalendarPage() {
                 </Field>
               </div>
             )}
+            <div className="rounded-2xl border border-line p-3">
+              <Field label="Repetición">
+                <Select
+                  value={creating.recurrenceFreq ?? ''}
+                  onChange={(e) => setCreating({ ...creating, recurrenceFreq: (e.target.value || null) as RecurrenceFreq | null, recurrenceInterval: 1 })}
+                  placeholder="No se repite"
+                  options={RECURRENCE_OPTIONS}
+                />
+              </Field>
+              {creating.recurrenceFreq && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <Field label="Cada">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={creating.recurrenceInterval ?? 1}
+                      onChange={(e) => setCreating({ ...creating, recurrenceInterval: Math.max(1, Number(e.target.value) || 1) })}
+                    />
+                  </Field>
+                  <Field label="Hasta (opcional)">
+                    <Input type="date" value={creating.recurrenceUntil ?? ''} onChange={(e) => setCreating({ ...creating, recurrenceUntil: e.target.value })} />
+                  </Field>
+                </div>
+              )}
+            </div>
             <Field label="Sección (opcional)">
               <Select value={creating.sectionId ?? ''} onChange={(e) => setCreating({ ...creating, sectionId: e.target.value ? Number(e.target.value) : undefined })} placeholder="—" options={sections.map((s) => ({ value: s.id, label: sectionLabel(s.grade.name, s.name) }))} />
             </Field>

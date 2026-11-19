@@ -2,7 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { DR_HOLIDAYS } from 'prisma/seeders/data/curriculum-matematica';
-import { addDays, formatDateOnly, isoWeekday, toDateOnly } from '../shared/dates.util';
+import {
+  addDays,
+  formatDateOnly,
+  isoWeekday,
+  toDateOnly,
+} from '../shared/dates.util';
 import {
   CreateHolidayDto,
   CreateSchoolYearDto,
@@ -40,9 +45,13 @@ export class SchoolYearService {
   async create(teacherId: number, dto: CreateSchoolYearDto) {
     const startDate = toDateOnly(dto.startDate);
     const endDate = toDateOnly(dto.endDate);
-    const periods = dto.periods?.length ? dto.periods : splitPeriods(startDate, endDate);
+    const periods = dto.periods?.length
+      ? dto.periods
+      : splitPeriods(startDate, endDate);
     const holidays =
-      dto.includeNationalHolidays === false ? [] : nationalHolidaysBetween(startDate, endDate);
+      dto.includeNationalHolidays === false
+        ? []
+        : nationalHolidaysBetween(startDate, endDate);
 
     return this.prisma.$transaction(async (tx) => {
       // Solo un año activo por docente.
@@ -57,8 +66,12 @@ export class SchoolYearService {
           startDate,
           endDate,
           isActive: true,
-          teachingWeeks: dto.teachingWeeks ?? countTeachingWeeks(startDate, endDate),
-          gradingScale: (dto.gradingScale ?? { type: 'NUMERIC_100', passing: 70 }) as object,
+          teachingWeeks:
+            dto.teachingWeeks ?? countTeachingWeeks(startDate, endDate),
+          gradingScale: dto.gradingScale ?? {
+            type: 'NUMERIC_100',
+            passing: 70,
+          },
           periods: {
             create: periods.map((p) => ({
               number: p.number,
@@ -86,7 +99,9 @@ export class SchoolYearService {
       if (dto.periods) {
         for (const p of dto.periods) {
           await tx.academicPeriod.upsert({
-            where: { schoolYearId_number: { schoolYearId: id, number: p.number } },
+            where: {
+              schoolYearId_number: { schoolYearId: id, number: p.number },
+            },
             update: {
               name: p.name,
               startDate: toDateOnly(p.startDate),
@@ -109,7 +124,9 @@ export class SchoolYearService {
           startDate: dto.startDate ? toDateOnly(dto.startDate) : undefined,
           endDate: dto.endDate ? toDateOnly(dto.endDate) : undefined,
           teachingWeeks: dto.teachingWeeks,
-          gradingScale: dto.gradingScale ? (dto.gradingScale as object) : undefined,
+          gradingScale: dto.gradingScale
+            ? (dto.gradingScale as object)
+            : undefined,
           isActive: dto.isActive,
         },
         include: INCLUDE,
@@ -125,7 +142,11 @@ export class SchoolYearService {
     });
   }
 
-  async addHoliday(teacherId: number, schoolYearId: number, dto: CreateHolidayDto) {
+  async addHoliday(
+    teacherId: number,
+    schoolYearId: number,
+    dto: CreateHolidayDto,
+  ) {
     await this.get(teacherId, schoolYearId);
     return this.prisma.holiday.create({
       data: {
@@ -141,7 +162,8 @@ export class SchoolYearService {
     const holiday = await this.prisma.holiday.findFirst({
       where: { id: holidayId, schoolYear: { teacherId } },
     });
-    if (!holiday) throw new NotFoundException(`Feriado ${holidayId} no encontrado`);
+    if (!holiday)
+      throw new NotFoundException(`Feriado ${holidayId} no encontrado`);
     await this.prisma.holiday.delete({ where: { id: holidayId } });
   }
 
@@ -155,7 +177,9 @@ export class SchoolYearService {
     holidays: Array<{ date: Date; name: string }>;
     periods: Array<{ number: number; startDate: Date; endDate: Date }>;
   }) {
-    const holidaySet = new Map(year.holidays.map((h) => [formatDateOnly(h.date), h.name]));
+    const holidaySet = new Map(
+      year.holidays.map((h) => [formatDateOnly(h.date), h.name]),
+    );
     const weeks: Array<{
       week: number;
       start: string;
@@ -177,7 +201,9 @@ export class SchoolYearService {
         if (holidaySet.has(key)) names.push(holidaySet.get(key)!);
         else teachingDays++;
       }
-      const period = year.periods.find((p) => cursor >= addDays(p.startDate, -6) && cursor <= p.endDate);
+      const period = year.periods.find(
+        (p) => cursor >= addDays(p.startDate, -6) && cursor <= p.endDate,
+      );
       weeks.push({
         week,
         start: formatDateOnly(cursor),
@@ -195,7 +221,10 @@ export class SchoolYearService {
 
 /** Divide el año en 4 periodos de duración similar. */
 export function splitPeriods(start: Date, end: Date): PeriodDto[] {
-  const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+  const totalDays = Math.max(
+    1,
+    Math.round((end.getTime() - start.getTime()) / 86_400_000),
+  );
   const size = Math.floor(totalDays / 4);
   return [1, 2, 3, 4].map((n) => {
     const s = addDays(start, (n - 1) * size);
@@ -211,15 +240,23 @@ export function splitPeriods(start: Date, end: Date): PeriodDto[] {
 
 function nationalHolidaysBetween(start: Date, end: Date) {
   const result: Array<{ name: string; date: Date; isNational: boolean }> = [];
-  for (let year = start.getUTCFullYear(); year <= end.getUTCFullYear(); year++) {
+  for (
+    let year = start.getUTCFullYear();
+    year <= end.getUTCFullYear();
+    year++
+  ) {
     for (const h of DR_HOLIDAYS) {
       const date = toDateOnly(`${year}-${h.monthDay}`);
-      if (date >= start && date <= end) result.push({ name: h.name, date, isNational: true });
+      if (date >= start && date <= end)
+        result.push({ name: h.name, date, isNational: true });
     }
   }
   return result;
 }
 
 function countTeachingWeeks(start: Date, end: Date): number {
-  return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (7 * 86_400_000)));
+  return Math.max(
+    1,
+    Math.ceil((end.getTime() - start.getTime()) / (7 * 86_400_000)),
+  );
 }

@@ -1,4 +1,14 @@
-import { Body, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { ActivityType } from '@prisma/client';
 import { CurrentUser } from 'src/modules/auth/decorators/current-user.decorator';
@@ -37,7 +47,10 @@ export class UnitsController {
   }
 
   @Get(':id')
-  get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.getUnit(user.id, id);
   }
 
@@ -57,7 +70,10 @@ export class UnitsController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.removeUnit(user.id, id);
   }
 }
@@ -90,13 +106,22 @@ export class LessonPlansController {
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, description: 'Plan con competencias, indicadores y contenidos resueltos.' })
-  get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({
+    status: 200,
+    description: 'Plan con competencias, indicadores y contenidos resueltos.',
+  })
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.getPlan(user.id, id);
   }
 
   @Post()
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateLessonPlanDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateLessonPlanDto,
+  ) {
     return this.planning.createPlan(user.id, dto);
   }
 
@@ -110,19 +135,31 @@ export class LessonPlansController {
   }
 
   @Post(':id/duplicate')
-  duplicate(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  duplicate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.duplicatePlan(user.id, id);
   }
 
   @Post(':id/presentation')
-  @ApiResponse({ status: 201, description: 'Crea la presentación de la plantilla oficial.' })
-  presentation(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({
+    status: 201,
+    description: 'Crea la presentación de la plantilla oficial.',
+  })
+  presentation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.presentationFromPlan(user.id, id);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.removePlan(user.id, id);
   }
 }
@@ -137,12 +174,18 @@ export class PresentationsController {
   }
 
   @Get(':id')
-  get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.getPresentation(user.id, id);
   }
 
   @Post()
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePresentationDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreatePresentationDto,
+  ) {
     return this.planning.createPresentation(user.id, dto);
   }
 
@@ -157,7 +200,10 @@ export class PresentationsController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.removePresentation(user.id, id);
   }
 }
@@ -168,17 +214,26 @@ export class ActivitiesController {
 
   @Get()
   @ApiQuery({ name: 'type', required: false, enum: ActivityType })
-  list(@CurrentUser() user: AuthenticatedUser, @Query('type') type?: ActivityType) {
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('type') type?: ActivityType,
+  ) {
     return this.planning.listActivities(user.id, type);
   }
 
   @Get(':id')
-  get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.getActivity(user.id, id);
   }
 
   @Post()
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateActivityDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateActivityDto,
+  ) {
     return this.planning.createActivity(user.id, dto);
   }
 
@@ -193,7 +248,10 @@ export class ActivitiesController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.planning.removeActivity(user.id, id);
   }
 }

@@ -10,7 +10,12 @@ import { PlanningService } from './planning.service';
 
 @Module({
   imports: [CurriculumModule],
-  controllers: [UnitsController, LessonPlansController, PresentationsController, ActivitiesController],
+  controllers: [
+    UnitsController,
+    LessonPlansController,
+    PresentationsController,
+    ActivitiesController,
+  ],
   providers: [PlanningService],
   exports: [PlanningService],
 })

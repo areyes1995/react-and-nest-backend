@@ -1,8 +1,5 @@
 import { Role, RolePermission } from '@prisma/client';
-import {
-  PermissionDto,
-  PermissionWithResource,
-} from './permission.dto';
+import { PermissionDto, PermissionWithResource } from './permission.dto';
 
 export type RoleWithPermissions = Role & {
   permissions: (RolePermission & {

@@ -1,9 +1,19 @@
 import { Module } from '@nestjs/common';
-import { ExamsController, InstrumentsController, QuestionsController } from './evaluation.controller';
+import {
+  AssessmentInstrumentsController,
+  ExamsController,
+  InstrumentsController,
+  QuestionsController,
+} from './evaluation.controller';
 import { EvaluationService } from './evaluation.service';
 
 @Module({
-  controllers: [QuestionsController, ExamsController, InstrumentsController],
+  controllers: [
+    QuestionsController,
+    ExamsController,
+    InstrumentsController,
+    AssessmentInstrumentsController,
+  ],
   providers: [EvaluationService],
   exports: [EvaluationService],
 })

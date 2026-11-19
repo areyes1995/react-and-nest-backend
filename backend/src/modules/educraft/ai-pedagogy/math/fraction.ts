@@ -13,7 +13,8 @@ export class Fraction {
 
   constructor(num: number, den = 1) {
     if (den === 0) throw new Error('División entre cero');
-    if (!Number.isFinite(num) || !Number.isFinite(den)) throw new Error('Número inválido');
+    if (!Number.isFinite(num) || !Number.isFinite(den))
+      throw new Error('Número inválido');
     // Decimales → fracción (hasta 6 cifras).
     if (!Number.isInteger(num) || !Number.isInteger(den)) {
       const scale = 10 ** 6;

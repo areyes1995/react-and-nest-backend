@@ -22,9 +22,7 @@ export class DefaultRbacService implements RbacService {
   }
 
   async getRolePermissions(identifier: string): Promise<RoleDto> {
-    const numericId = /^\d+$/.test(identifier)
-      ? Number(identifier)
-      : null;
+    const numericId = /^\d+$/.test(identifier) ? Number(identifier) : null;
 
     const role = numericId
       ? await this.rbacRepository.getRoleById(numericId)

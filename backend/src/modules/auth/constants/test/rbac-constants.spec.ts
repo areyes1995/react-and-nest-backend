@@ -1,5 +1,11 @@
-import { PERMISSIONS, RESOURCES } from 'src/modules/auth/constants/permissions.constants';
-import { ROLES, ROLE_DEFINITIONS } from 'src/modules/auth/constants/roles.constants';
+import {
+  PERMISSIONS,
+  RESOURCES,
+} from 'src/modules/auth/constants/permissions.constants';
+import {
+  ROLES,
+  ROLE_DEFINITIONS,
+} from 'src/modules/auth/constants/roles.constants';
 
 describe('RBAC constants', () => {
   it('ROLES contiene los 4 roles esperados', () => {

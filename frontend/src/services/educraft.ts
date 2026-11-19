@@ -473,7 +473,19 @@ export interface AdminUser {
   createdAt: string
 }
 
+export interface SystemLogEntry {
+  id: number
+  action: string
+  entity?: string | null
+  entityId?: number | null
+  details?: string | Record<string, unknown> | null
+  ip?: string | null
+  createdAt: string
+  user?: { id: number; firstName: string; lastName: string; email: string } | null
+}
+
 export const adminApi = {
+  logs: () => q<SystemLogEntry[]>('/system-logs'),
   users: (page = 1, pageSize = 20, filter: Record<string, string> = {}) => {
     const params: Params = { page, pageSize }
     for (const [k, v] of Object.entries(filter)) if (v) params[`filter[${k}]`] = v
@@ -488,4 +500,72 @@ export const adminApi = {
     q<Array<{ id: number; name: string; description?: string; isActive: boolean; permissions: Array<{ id: number; name: string; description?: string; resource: string }> }>>(
       '/roles/all',
     ),
+}
+
+// ── Mensajería entre docentes (en-app, sin Firebase) ─
+
+export type SharedResourceType = 'LIBRARY' | 'LESSON_PLAN' | 'LEARNING_UNIT'
+
+export interface SharedResourcePointer {
+  type: SharedResourceType
+  id: number
+  title: string
+  url: string
+}
+
+export interface MessagingParticipant {
+  userId: number
+  name: string
+  lastReadAt: string | null
+}
+
+export interface MessagingMessage {
+  id: number
+  conversationId: number
+  senderId: number
+  senderName: string
+  kind: 'TEXT' | 'SHARED_RESOURCE'
+  content: string
+  sharedResource: SharedResourcePointer | null
+  createdAt: string
+  isMine: boolean
+}
+
+export interface ConversationSummary {
+  id: number
+  title: string | null
+  participants: MessagingParticipant[]
+  lastMessage: MessagingMessage | null
+  unreadCount: number
+  updatedAt: string
+}
+
+export interface TeacherCandidate {
+  id: number
+  name: string
+  email: string
+}
+
+export const messagingApi = {
+  conversations: () => q<ConversationSummary[]>('/messaging/conversations'),
+  candidates: () => q<TeacherCandidate[]>('/messaging/candidates'),
+  createConversation: (body: { participantIds: number[]; title?: string; message?: string }) =>
+    create<ConversationSummary>('/messaging/conversations', body),
+  messages: (conversationId: number) => q<MessagingMessage[]>(`/messaging/conversations/${conversationId}/messages`),
+  send: (conversationId: number, content: string) =>
+    create<MessagingMessage>(`/messaging/conversations/${conversationId}/messages`, { content }),
+  markRead: (conversationId: number) =>
+    unwrap(patch(`/messaging/conversations/${conversationId}/read`)),
+  share: (conversationId: number, body: { sharedResource: { type: SharedResourceType; id: number }; note?: string }) =>
+    create<MessagingMessage>(`/messaging/conversations/${conversationId}/share`, body),
+  shared: () => q<MessagingMessage[]>('/messaging/shared'),
+}
+
+// ── Altas/bajas de notificaciones (complemento de notificationApi) ─
+
+export const notificationWriteApi = {
+  create: (body: { userId: number; type: Notification['type']; title: string; message: string; link?: string }) =>
+    create<Notification>('/notifications', body),
+  remove: (id: number) => remove(`/notifications/${id}`),
+  markUnread: (id: number) => unwrap(patch(`/notifications/${id}/unread`)),
 }

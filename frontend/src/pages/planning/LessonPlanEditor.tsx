@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Eye, FileDown, MonitorPlay, Pencil, Printer, Save, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Eye, FileDown, FileText, MonitorPlay, Pencil, Printer, Save, Sparkles, Trash2 } from 'lucide-react'
 import { aiApi, planningApi } from '@services/educraft'
 import type { LearningUnit, LessonMoment, LessonPlanInput, LessonPlanStatus } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
 import { useGradeCurriculum, useGrades, useSections } from '@hooks/useCatalog'
 import { Button, Card, CardHeader, Field, Input, Select, Spinner, Tabs, Textarea } from '@components/ui'
-import { CurriculumPicker } from '@/features/planning/CurriculumPicker'
+import { CurriculumPicker, EMPTY_CURRICULUM_SELECTION } from '@/features/planning/CurriculumPicker'
 import { LessonPlanTable } from '@/features/planning/LessonPlanTable'
-import { planDocumentHtml } from '@/features/planning/planDocument'
+import { planDocumentHtml, yintMatrixHtml } from '@/features/planning/planDocument'
 import { exportWord, printDocument } from '@lib/exporters'
 import { PLAN_STATUS } from '@lib/labels'
 import { sectionLabel, slugify, today } from '@lib/format'
@@ -38,7 +38,7 @@ export default function LessonPlanEditor() {
   const state = (location.state ?? {}) as { draft?: LessonPlanInput; unitId?: number; gradeId?: number; draftDate?: string }
   const [plan, setPlan] = useState<LessonPlanInput | null>(null)
   const [units, setUnits] = useState<LearningUnit[]>([])
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
+  const [mode, setMode] = useState<'edit' | 'preview' | 'yint'>('edit')
   const [saving, setSaving] = useState(false)
   const [assisting, setAssisting] = useState(false)
   const curriculum = useGradeCurriculum(plan?.gradeId)
@@ -56,9 +56,7 @@ export default function LessonPlanEditor() {
               date: state.draftDate ?? today(),
               durationMinutes: 45,
               strategies: [],
-              specificCompetenceIds: [],
-              indicatorIds: [],
-              contentIds: [],
+              ...EMPTY_CURRICULUM_SELECTION,
               moments: EMPTY_MOMENTS,
               status: 'DRAFT',
             },
@@ -81,6 +79,9 @@ export default function LessonPlanEditor() {
             specificCompetenceIds: p.specificCompetenceIds,
             indicatorIds: p.indicatorIds,
             contentIds: p.contentIds,
+            axisIds: p.axisIds ?? [],
+            capacityIds: p.capacityIds ?? [],
+            performanceIds: p.performanceIds ?? [],
             moments: p.moments,
             evaluation: p.evaluation,
             assignment: p.assignment,
@@ -165,27 +166,36 @@ export default function LessonPlanEditor() {
     }
   }
 
-  const doc = () =>
-    planDocumentHtml({
-      title: plan.title || plan.topic,
-      topic: plan.topic,
-      gradeName,
-      sectionName: section?.name,
-      date: plan.date,
-      durationMinutes: plan.durationMinutes,
-      purpose: plan.purpose,
-      strategies: plan.strategies,
-      moments: plan.moments,
-      indicators,
-      curriculum: curriculum
-        ? {
-            competences: curriculum.specificCompetences.filter((c) => plan.specificCompetenceIds?.includes(c.id)),
-            indicators: curriculum.indicators.filter((c) => plan.indicatorIds?.includes(c.id)),
-            contents: curriculum.contents.filter((c) => plan.contentIds?.includes(c.id)),
-          }
-        : null,
-      assignment: plan.assignment,
-    })
+  const selectedCurriculum = () =>
+    curriculum
+      ? {
+          competences: curriculum.specificCompetences.filter((c) => plan.specificCompetenceIds?.includes(c.id)),
+          indicators: curriculum.indicators.filter((c) => plan.indicatorIds?.includes(c.id)),
+          contents: curriculum.contents.filter((c) => plan.contentIds?.includes(c.id)),
+          axes: (curriculum.axes ?? []).filter((a) => plan.axisIds?.includes(a.id)),
+          capacities: (curriculum.capacities ?? []).filter((c) => plan.capacityIds?.includes(c.id)),
+          performances: (curriculum.performances ?? []).filter((p) => plan.performanceIds?.includes(p.id)),
+        }
+      : null
+
+  const documentData = () => ({
+    title: plan.title || plan.topic,
+    topic: plan.topic,
+    gradeName,
+    sectionName: section?.name,
+    date: plan.date,
+    durationMinutes: plan.durationMinutes,
+    purpose: plan.purpose,
+    strategies: plan.strategies,
+    moments: plan.moments,
+    indicators,
+    curriculum: selectedCurriculum(),
+    assignment: plan.assignment,
+  })
+  const doc = () => planDocumentHtml(documentData())
+  const yintDoc = () => yintMatrixHtml(documentData())
+  const exportDoc = () => (mode === 'yint' ? yintDoc() : doc())
+  const exportName = `${mode === 'yint' ? 'yint' : 'plan'}-${slugify(plan.title || plan.topic)}`
 
   return (
     <div>
@@ -200,12 +210,13 @@ export default function LessonPlanEditor() {
             items={[
               { key: 'edit', label: 'Editar', icon: <Pencil className="h-3.5 w-3.5" /> },
               { key: 'preview', label: 'Plantilla oficial', icon: <Eye className="h-3.5 w-3.5" /> },
+              { key: 'yint', label: 'Matriz YinT', icon: <FileText className="h-3.5 w-3.5" /> },
             ]}
           />
-          <Button variant="secondary" size="sm" icon={<FileDown className="h-3.5 w-3.5" />} onClick={() => exportWord(plan.title || 'Plan de clase', doc(), `plan-${slugify(plan.title || plan.topic)}`)}>
+          <Button variant="secondary" size="sm" icon={<FileDown className="h-3.5 w-3.5" />} onClick={() => exportWord(plan.title || 'Plan de clase', exportDoc(), exportName)}>
             Word
           </Button>
-          <Button variant="secondary" size="sm" icon={<Printer className="h-3.5 w-3.5" />} onClick={() => printDocument(plan.title || 'Plan de clase', doc())}>
+          <Button variant="secondary" size="sm" icon={<Printer className="h-3.5 w-3.5" />} onClick={() => printDocument(plan.title || 'Plan de clase', exportDoc())}>
             PDF
           </Button>
           {!isNew && (
@@ -242,7 +253,12 @@ export default function LessonPlanEditor() {
         </div>
       </div>
 
-      {mode === 'preview' ? (
+      {mode === 'yint' ? (
+        <Card className="card-pad space-y-3">
+          <h2 className="text-lg font-extrabold">Matriz YinT · {plan.title || plan.topic}</h2>
+          <div className="overflow-x-auto [&_td]:border [&_td]:border-line [&_td]:p-2 [&_td]:align-top" dangerouslySetInnerHTML={{ __html: yintDoc() }} />
+        </Card>
+      ) : mode === 'preview' ? (
         <Card className="card-pad space-y-3">
           <h2 className="text-lg font-extrabold">{plan.title || plan.topic}</h2>
           {plan.purpose && <p className="text-sm text-ink-2"><b>Propósito:</b> {plan.purpose}</p>}
@@ -262,7 +278,7 @@ export default function LessonPlanEditor() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Grado">
-                  <Select value={plan.gradeId} onChange={(e) => set({ gradeId: Number(e.target.value), specificCompetenceIds: [], indicatorIds: [], contentIds: [], sectionId: undefined, unitId: undefined })} options={grades.map((g) => ({ value: g.id, label: g.name }))} />
+                  <Select value={plan.gradeId} onChange={(e) => set({ gradeId: Number(e.target.value), ...EMPTY_CURRICULUM_SELECTION, sectionId: undefined, unitId: undefined })} options={grades.map((g) => ({ value: g.id, label: g.name }))} />
                 </Field>
                 <Field label="Sección">
                   <Select value={plan.sectionId ?? ''} onChange={(e) => set({ sectionId: e.target.value ? Number(e.target.value) : null })} placeholder="—" options={sections.filter((s) => s.gradeId === plan.gradeId).map((s) => ({ value: s.id, label: sectionLabel(s.grade.name, s.name) }))} />
@@ -291,7 +307,14 @@ export default function LessonPlanEditor() {
               <CardHeader title="Adecuación curricular" />
               <CurriculumPicker
                 gradeId={plan.gradeId}
-                value={{ specificCompetenceIds: plan.specificCompetenceIds ?? [], indicatorIds: plan.indicatorIds ?? [], contentIds: plan.contentIds ?? [] }}
+                value={{
+                  specificCompetenceIds: plan.specificCompetenceIds ?? [],
+                  indicatorIds: plan.indicatorIds ?? [],
+                  contentIds: plan.contentIds ?? [],
+                  axisIds: plan.axisIds ?? [],
+                  capacityIds: plan.capacityIds ?? [],
+                  performanceIds: plan.performanceIds ?? [],
+                }}
                 onChange={(v) => set(v)}
                 compact
               />

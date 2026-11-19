@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Body,
   Delete,
   Get,
   HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -19,13 +21,17 @@ import type { Response } from 'express';
 import { CurrentUser } from 'src/modules/auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../shared/authenticated-user';
 import { EducraftController } from '../shared/educraft-controller.decorator';
-import { MAX_UPLOAD_BYTES, type UploadedFileLike } from '../shared/uploaded-file';
+import {
+  MAX_UPLOAD_BYTES,
+  type UploadedFileLike,
+} from '../shared/uploaded-file';
 import {
   CreateEvidenceDto,
   CreateObservationDto,
   CreateSectionDto,
   CreateStudentDto,
   ImportStudentsDto,
+  UpdateObservationDto,
   UpdateSectionDto,
   UpdateStudentDto,
 } from './dto/section.dto';
@@ -38,19 +44,35 @@ export class SectionController {
   constructor(private readonly sections: SectionService) {}
 
   @Get()
-  @ApiQuery({ name: 'schoolYearId', required: false, description: 'Por defecto, el año activo' })
-  list(@CurrentUser() user: AuthenticatedUser, @Query('schoolYearId') schoolYearId?: string) {
+  @ApiQuery({
+    name: 'schoolYearId',
+    required: false,
+    description: 'Por defecto, el año activo',
+  })
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('schoolYearId') schoolYearId?: string,
+  ) {
     return this.sections.list(user.id, optionalInt(schoolYearId));
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, description: 'Sección con horario y lista de estudiantes.' })
-  get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({
+    status: 200,
+    description: 'Sección con horario y lista de estudiantes.',
+  })
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.sections.get(user.id, id);
   }
 
   @Post()
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateSectionDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateSectionDto,
+  ) {
     return this.sections.create(user.id, dto);
   }
 
@@ -65,7 +87,10 @@ export class SectionController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.sections.remove(user.id, id);
   }
 
@@ -79,13 +104,39 @@ export class SectionController {
   }
 
   @Post(':id/students/import')
-  @ApiResponse({ status: 201, description: 'Importación masiva (filas leídas de Excel/CSV).' })
+  @ApiResponse({
+    status: 201,
+    description: 'Importación masiva (filas leídas de Excel/CSV).',
+  })
   importStudents(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ImportStudentsDto,
   ) {
     return this.sections.importStudents(user.id, id, dto.students);
+  }
+
+  @Post(':id/students/import-file')
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 201,
+    description:
+      'Importa un CSV: total de filas, importados, omitidos y errores por fila.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'CSV inválido o .xlsx (usar el parser del navegador).',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
+  importStudentsFile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file?: UploadedFileLike,
+  ) {
+    if (!file) throw new BadRequestException('Selecciona un archivo .csv');
+    return this.sections.importStudentsFile(user.id, id, file);
   }
 }
 
@@ -104,6 +155,18 @@ export class StudentController {
     return this.sections.listStudents(user.id, optionalInt(sectionId), q);
   }
 
+  @Get(':id')
+  @ApiResponse({
+    status: 200,
+    description: 'Datos del estudiante y su sección.',
+  })
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.sections.getStudent(user.id, id);
+  }
+
   @Put(':id')
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -115,13 +178,34 @@ export class StudentController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.sections.removeStudent(user.id, id);
   }
 
+  @Post(':id/restore')
+  @ApiResponse({
+    status: 201,
+    description: 'Reactiva un estudiante dado de baja.',
+  })
+  restore(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.sections.restoreStudent(user.id, id);
+  }
+
   @Get(':id/record')
-  @ApiResponse({ status: 200, description: 'Expediente digital del estudiante.' })
-  record(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({
+    status: 200,
+    description: 'Expediente digital del estudiante.',
+  })
+  record(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.sections.record(user.id, id);
   }
 
@@ -132,6 +216,16 @@ export class StudentController {
     @Body() dto: CreateObservationDto,
   ) {
     return this.sections.addObservation(user.id, id, dto);
+  }
+
+  @Patch(':id/observations/:observationId')
+  updateObservation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('observationId', ParseIntPipe) observationId: number,
+    @Body() dto: UpdateObservationDto,
+  ) {
+    return this.sections.updateObservation(user.id, id, observationId, dto);
   }
 
   @Delete('observations/:observationId')
@@ -145,7 +239,9 @@ export class StudentController {
 
   @Post(':id/evidences')
   @ApiConsumes('multipart/form-data', 'application/json')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
   addEvidence(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseIntPipe) id: number,
@@ -166,7 +262,7 @@ export class StudentController {
       'Content-Type': file.contentType,
       'Content-Disposition': `inline; filename="${encodeURIComponent(file.fileName)}"`,
     });
-    return new StreamableFile(file.stream as import('stream').Readable);
+    return new StreamableFile(file.stream);
   }
 
   @Delete('evidences/:evidenceId')

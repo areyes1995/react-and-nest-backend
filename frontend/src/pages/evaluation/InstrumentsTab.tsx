@@ -15,7 +15,14 @@ const LEVEL_COLORS = ['bg-soft-green', 'bg-soft-blue', 'bg-soft-yellow', 'bg-sof
 
 function defaultContent(type: InstrumentType): EvaluationInstrument['content'] {
   if (type === 'RUBRIC')
-    return { levels: ['Excelente', 'Logrado', 'En proceso', 'Inicio'], scores: [4, 3, 2, 1], criteria: [{ criterion: 'Criterio 1', weight: 100, descriptors: ['', '', '', ''] }] }
+    return {
+      levels: ['Excelente', 'Logrado', 'En proceso', 'Inicio'],
+      scores: [4, 3, 2, 1],
+      criteria: [
+        { criterion: 'Criterio 1', weight: 50, descriptors: ['Dominio pleno', 'Logro esperado', 'En proceso', 'En inicio'] },
+        { criterion: 'Criterio 2', weight: 50, descriptors: ['Dominio pleno', 'Logro esperado', 'En proceso', 'En inicio'] },
+      ],
+    }
   if (type === 'CHECKLIST') return { items: [{ text: 'Representa datos' }, { text: 'Resuelve correctamente' }, { text: 'Argumenta procedimientos' }, { text: 'Comunica resultados' }] }
   return {
     scale: '1-4',
@@ -254,6 +261,10 @@ export function InstrumentsTab({ type, openId }: { type: InstrumentType; openId?
 function RubricBuilder({ content, onChange }: { content: RubricContent; onChange: (c: RubricContent) => void }) {
   const total = content.criteria.reduce((a, c) => a + (Number(c.weight) || 0), 0)
   const setCriterion = (i: number, patch: Partial<RubricContent['criteria'][number]>) => onChange({ ...content, criteria: content.criteria.map((c, k) => (k === i ? { ...c, ...patch } : c)) })
+  const balance = (criteria: RubricContent['criteria']) => {
+    const part = Math.floor(100 / criteria.length)
+    return criteria.map((c, i) => ({ ...c, weight: i === criteria.length - 1 ? 100 - part * (criteria.length - 1) : part }))
+  }
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-2xl border border-line">
@@ -296,9 +307,14 @@ function RubricBuilder({ content, onChange }: { content: RubricContent; onChange
         </table>
       </div>
       <div className="flex items-center justify-between">
-        <Button size="sm" variant="soft" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => onChange({ ...content, criteria: [...content.criteria, { criterion: 'Nuevo criterio', weight: 0, descriptors: content.levels.map(() => '') }] })}>
-          Criterio
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="soft" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => onChange({ ...content, criteria: balance([...content.criteria, { criterion: 'Nuevo criterio', weight: 0, descriptors: content.levels.map(() => 'Sin evidencia') }]) })}>
+            Criterio
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => onChange({ ...content, criteria: balance(content.criteria) })}>
+            Equilibrar pesos
+          </Button>
+        </div>
         <Badge tone={total === 100 ? 'green' : 'yellow'}>Pesos: {total}%</Badge>
       </div>
     </div>
@@ -317,7 +333,7 @@ function ChecklistBuilder({ content, onChange }: { content: ChecklistContent; on
           </button>
         </div>
       ))}
-      <Button size="sm" variant="soft" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => onChange({ items: [...content.items, { text: '' }] })}>
+      <Button size="sm" variant="soft" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => onChange({ items: [...content.items, { text: 'Nuevo indicador' }] })}>
         Indicador
       </Button>
     </div>
@@ -352,7 +368,7 @@ function ScaleBuilder({ content, onChange }: { content: RatingScaleContent; onCh
             </button>
           </div>
         ))}
-        <Button size="sm" variant="soft" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => onChange({ ...content, items: [...content.items, { text: '' }] })}>
+        <Button size="sm" variant="soft" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => onChange({ ...content, items: [...content.items, { text: 'Nuevo aspecto' }] })}>
           Aspecto
         </Button>
       </div>

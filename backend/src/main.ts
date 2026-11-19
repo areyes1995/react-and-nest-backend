@@ -27,7 +27,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Educraft XYZ API')
-    .setDescription('Plataforma integral para docentes de Matemática (MINERD, Nivel Secundario)')
+    .setDescription(
+      'Plataforma integral para docentes de Matemática (MINERD, Nivel Secundario)',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();

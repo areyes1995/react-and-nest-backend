@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type RefObject, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '@lib/cn'
@@ -13,18 +13,70 @@ const SIZES: Record<Size, string> = {
   full: 'max-w-[min(1400px,96vw)] h-[92vh]',
 }
 
-function useEscape(open: boolean, onClose: () => void) {
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function useDialogA11y(open: boolean, onClose: () => void, ref: RefObject<HTMLElement | null>) {
+  const titleId = useId()
+  const descId = useId()
+  const closeRef = useRef(onClose)
+
+  useEffect(() => {
+    closeRef.current = onClose
+  }, [onClose])
+
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const previous = document.activeElement as HTMLElement | null
+    const container = ref.current
+    const focusables = () =>
+      container
+        ? Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+            (el) => !el.hasAttribute('hidden') && el.getClientRects().length > 0,
+          )
+        : []
+
+    const frame = requestAnimationFrame(() => {
+      const [first] = focusables()
+      ;(first ?? container)?.focus()
+    })
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeRef.current()
+        return
+      }
+      if (e.key !== 'Tab' || !container) return
+      const items = focusables()
+      if (!items.length) {
+        e.preventDefault()
+        container.focus()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey && (active === first || !container.contains(active))) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (active === last || !container.contains(active))) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
+    const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
+      cancelAnimationFrame(frame)
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
+      document.body.style.overflow = prevOverflow
+      if (previous && document.contains(previous)) previous.focus()
     }
-  }, [open, onClose])
+  }, [open, ref])
+
+  return { titleId, descId }
 }
 
 export function Modal({
@@ -48,10 +100,20 @@ export function Modal({
   footer?: ReactNode
   className?: string
 }) {
-  useEscape(open, onClose)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const { titleId, descId } = useDialogA11y(open, onClose, dialogRef)
   if (!open) return null
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={title ? undefined : 'Ventana de diálogo'}
+      aria-describedby={subtitle ? descId : undefined}
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3 outline-none sm:p-6"
+    >
       <div className="absolute inset-0 bg-[var(--overlay)] backdrop-blur-[2px]" onClick={onClose} />
       <div
         className={cn(
@@ -64,15 +126,15 @@ export function Modal({
           <div className="flex items-start gap-3 border-b border-line px-5 py-4">
             {icon}
             <div className="min-w-0 flex-1">
-              {title && <h2 className="text-base font-bold">{title}</h2>}
-              {subtitle && <p className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
+              {title && <h2 id={titleId} className="text-base font-bold">{title}</h2>}
+              {subtitle && <p id={descId} className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
             </div>
             <button type="button" className="icon-btn -mr-2 -mt-1" onClick={onClose} aria-label="Cerrar">
               <X className="h-4 w-4" />
             </button>
           </div>
         )}
-        <div className="scroll-area flex-1 px-5 py-4">{children}</div>
+        <div className="scroll-area min-w-0 flex-1 px-5 py-4">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line bg-surface-2 px-5 py-3">{footer}</div>}
       </div>
     </div>,
@@ -99,10 +161,20 @@ export function Drawer({
   footer?: ReactNode
   width?: string
 }) {
-  useEscape(open, onClose)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const { titleId, descId } = useDialogA11y(open, onClose, dialogRef)
   if (!open) return null
   return createPortal(
-    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={title ? undefined : 'Panel lateral'}
+      aria-describedby={subtitle ? descId : undefined}
+      className="fixed inset-0 z-[70] outline-none"
+    >
       <div className="absolute inset-0 bg-[var(--overlay)]" onClick={onClose} />
       <aside
         className={cn(
@@ -113,14 +185,14 @@ export function Drawer({
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           {icon}
           <div className="min-w-0 flex-1">
-            {title && <h2 className="text-base font-bold">{title}</h2>}
-            {subtitle && <p className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
+            {title && <h2 id={titleId} className="text-base font-bold">{title}</h2>}
+            {subtitle && <p id={descId} className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
           </div>
           <button type="button" className="icon-btn -mr-2" onClick={onClose} aria-label="Cerrar">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="scroll-area flex-1">{children}</div>
+        <div className="scroll-area min-w-0 flex-1">{children}</div>
         {footer && <div className="border-t border-line px-5 py-3">{footer}</div>}
       </aside>
     </div>,

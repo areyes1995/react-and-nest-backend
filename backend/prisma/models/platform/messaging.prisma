@@ -1,0 +1,76 @@
+// ======================================================
+// MENSAJERÍA — colaboración entre docentes y registro de
+// entregas de alertas críticas a las familias.
+// Nota: no se incorpora Firebase (la plataforma no tiene
+// esa dependencia): la conversación es 100% en-app y el
+// frontend refresca los hilos mediante consultas periódicas.
+// ======================================================
+
+enum MessageKind {
+  TEXT
+  SHARED_RESOURCE
+}
+
+enum SharedResourceType {
+  LIBRARY
+  LESSON_PLAN
+  LEARNING_UNIT
+}
+
+model Conversation {
+  id          Int      @id @default(autoincrement())
+  title       String?  @db.VarChar(150)
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+}
+
+/// Un docente solo pertenece a las conversaciones en las que
+/// figura aquí: esta tabla es el límite de visibilidad.
+model ConversationParticipant {
+  id             Int       @id @default(autoincrement())
+  conversationId Int
+  userId         Int
+  joinedAt       DateTime  @default(now())
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             Int            @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  kind           MessageKind    @default(TEXT)
+  content        String         @db.Text
+  /// Puntero JSON al recurso compartido: { type, id, title, url }.
+  sharedResource Json?
+  createdAt      DateTime       @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+/// Un correo de alerta crítica por estudiante y día.
+/// La llave única hace idempotente el envío diario.
+model GuardianAlertDelivery {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  teacherId Int
+  kind      String   @db.VarChar(40)
+  email     String   @db.VarChar(150)
+  sentFor   DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, sentFor])
+  @@index([sentFor])
+}

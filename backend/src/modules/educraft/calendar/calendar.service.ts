@@ -1,9 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { TeacherScopeService } from '../shared/teacher-scope.service';
-import { addDays, formatDateOnly, isoWeekday, toDateOnly } from '../shared/dates.util';
+import { addDays, formatDateOnly, toDateOnly } from '../shared/dates.util';
 import { CreateEventDto, UpdateEventDto } from './dto/calendar.dto';
 import { localParts, sectionLabel } from '../shared/zoned.util';
+import {
+  escapeIcsText,
+  expandRecurrence,
+  foldIcsLine,
+  formatUtcStamp,
+  icsDateStamp,
+  toIcsDate,
+  toUtcDate,
+  type RecurrenceFreq,
+} from './calendar.util';
 
 export interface AgendaItem {
   key: string;
@@ -20,6 +31,7 @@ export interface AgendaItem {
   section?: { id: number; name: string; grade: string; color: string } | null;
   lessonPlanId?: number | null;
   assessmentId?: number | null;
+  recurring?: boolean;
 }
 
 const EVENT_COLORS: Record<string, string> = {
@@ -34,6 +46,18 @@ const EVENT_COLORS: Record<string, string> = {
   REMINDER: '#eab308',
 };
 
+type CalendarEventWithRelations = Prisma.CalendarEventGetPayload<{
+  include: { section: { include: { grade: true } } };
+}>;
+
+function parseWeekdays(value: string | null): number[] | undefined {
+  if (!value) return undefined;
+  const days = value
+    .split(',')
+    .map((part) => Number(part.trim()))
+    .filter((day) => Number.isInteger(day) && day >= 1 && day <= 7);
+  return days.length ? days : undefined;
+}
 
 @Injectable()
 export class CalendarService {
@@ -43,18 +67,42 @@ export class CalendarService {
   ) {}
 
   /**
-   * Agenda unificada entre dos fechas: eventos propios, clases
-   * derivadas del horario semanal (excepto en feriados) y feriados.
+   * Agenda unificada entre dos fechas: eventos propios (con recurrencias
+   * expandidas), clases derivadas del horario semanal y feriados.
    */
-  async agenda(teacherId: number, from: string, to: string, includeClasses = true) {
+  async agenda(
+    teacherId: number,
+    from: string,
+    to: string,
+    includeClasses = true,
+  ) {
     const start = toDateOnly(from);
     const end = toDateOnly(to);
     const endExclusive = addDays(end, 1);
     const year = await this.scope.activeSchoolYear(teacherId);
 
-    const [events, holidays, sections] = await Promise.all([
+    const [events, recurringEvents, holidays, sections] = await Promise.all([
       this.prisma.calendarEvent.findMany({
-        where: { teacherId, deletedAt: null, startAt: { gte: addDays(start, -1), lt: addDays(endExclusive, 1) } },
+        where: {
+          teacherId,
+          deletedAt: null,
+          recurrenceFreq: null,
+          startAt: { gte: addDays(start, -1), lt: addDays(endExclusive, 1) },
+        },
+        include: { section: { include: { grade: true } } },
+        orderBy: { startAt: 'asc' },
+      }),
+      this.prisma.calendarEvent.findMany({
+        where: {
+          teacherId,
+          deletedAt: null,
+          recurrenceFreq: { not: null },
+          startAt: { lte: addDays(endExclusive, 1) },
+          OR: [
+            { recurrenceUntil: null },
+            { recurrenceUntil: { gte: addDays(start, -1) } },
+          ],
+        },
         include: { section: { include: { grade: true } } },
         orderBy: { startAt: 'asc' },
       }),
@@ -87,34 +135,16 @@ export class CalendarService {
       });
     }
 
-    for (const e of events) {
-      const day = e.allDay ? formatDateOnly(e.startAt) : localParts(e.startAt).date;
-      if (day < from.slice(0, 10) || day > to.slice(0, 10)) continue;
-      items.push({
-        key: `event-${e.id}`,
-        source: 'event',
-        id: e.id,
-        type: e.type,
-        title: e.title,
-        description: e.description,
-        date: e.allDay ? formatDateOnly(e.startAt) : localParts(e.startAt).date,
-        startTime: e.allDay ? null : localParts(e.startAt).time,
-        endTime: e.endAt && !e.allDay ? localParts(e.endAt).time : null,
-        allDay: e.allDay,
-        color: e.color ?? e.section?.color ?? EVENT_COLORS[e.type],
-        section: e.section
-          ? { id: e.section.id, name: e.section.name, grade: e.section.grade.name, color: e.section.color }
-          : null,
-        lessonPlanId: e.lessonPlanId,
-        assessmentId: e.assessmentId,
-      });
+    for (const e of [...events, ...recurringEvents]) {
+      items.push(...this.eventItems(e, start, end));
     }
 
     if (year) {
       for (let day = start; day <= end; day = addDays(day, 1)) {
         const key = formatDateOnly(day);
-        if (holidayDays.has(key) || day < year.startDate || day > year.endDate) continue;
-        const weekday = isoWeekday(day);
+        if (holidayDays.has(key) || day < year.startDate || day > year.endDate)
+          continue;
+        const weekday = day.getUTCDay() === 0 ? 7 : day.getUTCDay();
         for (const s of sections) {
           for (const slot of s.schedules.filter((x) => x.weekday === weekday)) {
             items.push({
@@ -129,7 +159,12 @@ export class CalendarService {
               endTime: slot.endTime,
               allDay: false,
               color: s.color,
-              section: { id: s.id, name: s.name, grade: s.grade.name, color: s.color },
+              section: {
+                id: s.id,
+                name: s.name,
+                grade: s.grade.name,
+                color: s.color,
+              },
             });
           }
         }
@@ -142,6 +177,67 @@ export class CalendarService {
         Number(b.allDay) - Number(a.allDay) ||
         (a.startTime ?? '').localeCompare(b.startTime ?? ''),
     );
+  }
+
+  private eventItems(
+    event: CalendarEventWithRelations,
+    start: Date,
+    end: Date,
+  ): AgendaItem[] {
+    const anchorDay = event.allDay
+      ? formatDateOnly(event.startAt)
+      : localParts(event.startAt).date;
+    const startTime = event.allDay ? null : localParts(event.startAt).time;
+    const endTime =
+      event.endAt && !event.allDay ? localParts(event.endAt).time : null;
+    const recurring = Boolean(event.recurrenceFreq);
+    const dates = recurring
+      ? expandRecurrence(
+          toDateOnly(anchorDay),
+          {
+            freq: event.recurrenceFreq as RecurrenceFreq,
+            interval: event.recurrenceInterval ?? 1,
+            until: event.recurrenceUntil,
+            count: event.recurrenceCount,
+            byWeekday: parseWeekdays(event.recurrenceByWeekday),
+          },
+          start,
+          end,
+        )
+      : [toDateOnly(anchorDay)];
+
+    return dates
+      .filter(
+        (day) =>
+          formatDateOnly(day) >= formatDateOnly(start) &&
+          formatDateOnly(day) <= formatDateOnly(end),
+      )
+      .map((day) => ({
+        key: recurring
+          ? `event-${event.id}-${formatDateOnly(day)}`
+          : `event-${event.id}`,
+        source: 'event' as const,
+        id: event.id,
+        type: event.type,
+        title: event.title,
+        description: event.description,
+        date: formatDateOnly(day),
+        startTime,
+        endTime,
+        allDay: event.allDay,
+        color: event.color ?? event.section?.color ?? EVENT_COLORS[event.type],
+        section: event.section
+          ? {
+              id: event.section.id,
+              name: event.section.name,
+              grade: event.section.grade.name,
+              color: event.section.color,
+            }
+          : null,
+        lessonPlanId: event.lessonPlanId,
+        assessmentId: event.assessmentId,
+        recurring,
+      }));
   }
 
   async create(teacherId: number, dto: CreateEventDto) {
@@ -157,6 +253,21 @@ export class CalendarService {
         allDay: dto.allDay ?? false,
         sectionId: dto.sectionId,
         color: dto.color,
+        recurrenceFreq: dto.recurrenceFreq ?? null,
+        recurrenceInterval: dto.recurrenceFreq
+          ? (dto.recurrenceInterval ?? 1)
+          : null,
+        recurrenceUntil:
+          dto.recurrenceFreq && dto.recurrenceUntil
+            ? toDateOnly(dto.recurrenceUntil)
+            : null,
+        recurrenceCount: dto.recurrenceFreq
+          ? (dto.recurrenceCount ?? null)
+          : null,
+        recurrenceByWeekday:
+          dto.recurrenceFreq && dto.recurrenceByWeekday?.length
+            ? dto.recurrenceByWeekday.join(',')
+            : null,
       },
     });
   }
@@ -170,7 +281,13 @@ export class CalendarService {
         assessment: {
           include: {
             scores: { select: { delivered: true, score: true } },
-            section: { select: { _count: { select: { students: { where: { deletedAt: null } } } } } },
+            section: {
+              select: {
+                _count: {
+                  select: { students: { where: { deletedAt: null } } },
+                },
+              },
+            },
           },
         },
       },
@@ -203,12 +320,88 @@ export class CalendarService {
         allDay: dto.allDay,
         sectionId: dto.sectionId,
         color: dto.color,
+        recurrenceFreq: dto.recurrenceFreq,
+        recurrenceInterval:
+          dto.recurrenceInterval ?? (dto.recurrenceFreq ? 1 : undefined),
+        recurrenceUntil:
+          dto.recurrenceUntil !== undefined
+            ? dto.recurrenceUntil
+              ? toDateOnly(dto.recurrenceUntil)
+              : null
+            : undefined,
+        recurrenceCount: dto.recurrenceCount,
+        recurrenceByWeekday: dto.recurrenceByWeekday
+          ? dto.recurrenceByWeekday.join(',')
+          : dto.recurrenceByWeekday === undefined
+            ? undefined
+            : null,
       },
     });
   }
 
   async remove(teacherId: number, id: number) {
     await this.get(teacherId, id);
-    await this.prisma.calendarEvent.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.calendarEvent.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /** Agenda en iCalendar (text/calendar) con líneas escapadas y plegadas. */
+  async exportIcs(
+    teacherId: number,
+    from: string,
+    to: string,
+  ): Promise<string> {
+    const items = (await this.agenda(teacherId, from, to, true)).filter(
+      (i) => i.source === 'event' || i.source === 'holiday',
+    );
+    const stamp = icsDateStamp();
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Educraft XYZ//Agenda Academica//ES',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Agenda Educraft XYZ',
+    ];
+
+    for (const item of items) {
+      const description = [
+        EVENT_COLORS[item.type] ? item.type : '',
+        item.section ? sectionLabel(item.section.grade, item.section.name) : '',
+        item.description ?? '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${item.key}@educraft.app`,
+        `DTSTAMP:${stamp}`,
+        `SUMMARY:${escapeIcsText(item.title)}`,
+        `DESCRIPTION:${escapeIcsText(description)}`,
+      );
+      if (item.allDay) {
+        const day = toDateOnly(item.date);
+        lines.push(
+          `DTSTART;VALUE=DATE:${toIcsDate(formatDateOnly(day))}`,
+          `DTEND;VALUE=DATE:${toIcsDate(formatDateOnly(addDays(day, 1)))}`,
+        );
+      } else {
+        const start = toUtcDate(item.date, item.startTime ?? '00:00');
+        const end =
+          item.endTime && item.startTime && item.endTime > item.startTime
+            ? toUtcDate(item.date, item.endTime)
+            : new Date(start.getTime() + 60 * 60_000);
+        lines.push(
+          `DTSTART:${formatUtcStamp(start)}`,
+          `DTEND:${formatUtcStamp(end)}`,
+        );
+      }
+      lines.push('END:VEVENT');
+    }
+
+    lines.push('END:VCALENDAR');
+    return lines.map(foldIcsLine).join('');
   }
 }

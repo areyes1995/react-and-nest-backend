@@ -50,6 +50,11 @@ export function exportWord(title: string, body: string, fileName: string) {
   downloadBlob(new Blob(['\ufeff', html], { type: 'application/msword' }), fileName.endsWith('.doc') ? fileName : `${fileName}.doc`)
 }
 
+export function downloadHtmlAsDoc(blob: Blob, fileName: string) {
+  const name = /\.html?$/i.test(fileName) ? fileName : `${fileName}.html`
+  downloadBlob(new Blob([blob], { type: 'text/html;charset=utf-8' }), name)
+}
+
 /** Abre el diálogo de impresión (permite "Guardar como PDF"). */
 export function printDocument(title: string, body: string, landscape = true) {
   const iframe = document.createElement('iframe')

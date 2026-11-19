@@ -9,13 +9,17 @@ import { BadRequestException } from '@nestjs/common';
 /** "2025-05-15" | Date → Date a las 00:00 UTC de ese día. */
 export function toDateOnly(value: string | Date): Date {
   if (value instanceof Date) {
-    return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+    return new Date(
+      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+    );
   }
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   if (!match) {
     throw new BadRequestException(`Fecha inválida: ${value}`);
   }
-  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
 }
 
 /** Date → "YYYY-MM-DD" (UTC). */

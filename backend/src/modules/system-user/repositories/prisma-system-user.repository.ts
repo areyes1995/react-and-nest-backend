@@ -40,7 +40,10 @@ export class PrismaSystemUserRepository implements SystemUserRepository {
     const prismaClient = tx || this.prisma;
     // Búsqueda insensible a mayúsculas/espacios — evita "credenciales inválidas" por Admin@Uapaverse.com
     return prismaClient.systemUser.findFirst({
-      where: { email: { equals: email.trim(), mode: 'insensitive' }, deletedAt: null },
+      where: {
+        email: { equals: email.trim(), mode: 'insensitive' },
+        deletedAt: null,
+      },
       include: ROLES_INCLUDE,
     });
   }
@@ -55,28 +58,30 @@ export class PrismaSystemUserRepository implements SystemUserRepository {
     >({
       count: (args) => this.prisma.systemUser.count(args),
       findMany: (args) =>
-        this.prisma.systemUser.findMany(args) as unknown as PromiseLike<SystemUserWithRoles[]>,
-        where: { deletedAt: null },
-        findManyArgs: {
-          orderBy: { createdAt: 'desc' },
-          include: ROLES_INCLUDE,
+        this.prisma.systemUser.findMany(args) as unknown as PromiseLike<
+          SystemUserWithRoles[]
+        >,
+      where: { deletedAt: null },
+      findManyArgs: {
+        orderBy: { createdAt: 'desc' },
+        include: ROLES_INCLUDE,
+      },
+      query,
+      filterConfig: {
+        id: 'number',
+        firstName: 'string',
+        lastName: 'string',
+        employeeId: 'string',
+        email: 'string',
+        phoneNumber: 'string',
+        role: (value) => {
+          const normalized =
+            typeof value === 'string' ? value.toUpperCase() : '';
+          if (!normalized) return null;
+          return { roles: { some: { role: { name: normalized } } } };
         },
-        query,
-        filterConfig: {
-          id: 'number',
-          firstName: 'string',
-          lastName: 'string',
-          employeeId: 'string',
-          email: 'string',
-          phoneNumber: 'string',
-          role: (value) => {
-            const normalized =
-              typeof value === 'string' ? value.toUpperCase() : '';
-            if (!normalized) return null;
-            return { roles: { some: { role: { name: normalized } } } };
-          },
-          isActive: 'boolean',
-        },
+        isActive: 'boolean',
+      },
     });
   }
 

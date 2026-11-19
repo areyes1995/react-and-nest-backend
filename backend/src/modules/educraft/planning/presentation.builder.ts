@@ -47,7 +47,11 @@ export interface PlanForSlides {
   purpose?: string | null;
   assignment?: string | null;
   gradeName?: string;
-  moments: Array<{ moment: string; activities: string[]; metacognition?: string }>;
+  moments: Array<{
+    moment: string;
+    activities: string[];
+    metacognition?: string;
+  }>;
   contents?: string[];
   examples?: Array<{ title: string; latex?: string; steps?: string[] }>;
   exercises?: Array<{ statement: string; answer?: string }>;
@@ -86,7 +90,9 @@ export function buildPresentationFromPlan(plan: PlanForSlides): Slide[] {
       id: slideId(),
       layout: 'title',
       title: plan.title,
-      subtitle: plan.gradeName ? `${plan.topic} · ${plan.gradeName}` : plan.topic,
+      subtitle: plan.gradeName
+        ? `${plan.topic} · ${plan.gradeName}`
+        : plan.topic,
       blocks: [],
     },
     {
@@ -104,7 +110,10 @@ export function buildPresentationFromPlan(plan: PlanForSlides): Slide[] {
           type: 'bullets',
           items: inicio?.activities.length
             ? inicio.activities
-            : ['¿Qué recordamos de la clase anterior?', `¿Qué sabemos sobre ${plan.topic}?`],
+            : [
+                '¿Qué recordamos de la clase anterior?',
+                `¿Qué sabemos sobre ${plan.topic}?`,
+              ],
         },
       ],
       notes: inicio?.metacognition,
@@ -116,7 +125,9 @@ export function buildPresentationFromPlan(plan: PlanForSlides): Slide[] {
       blocks: [
         {
           type: 'text',
-          text: plan.purpose || `Comprender y aplicar ${plan.topic} en situaciones del contexto.`,
+          text:
+            plan.purpose ||
+            `Comprender y aplicar ${plan.topic} en situaciones del contexto.`,
         },
       ],
     },
@@ -144,7 +155,9 @@ export function buildPresentationFromPlan(plan: PlanForSlides): Slide[] {
         title: ex.title,
         blocks: [
           ...(ex.latex ? [{ type: 'formula' as const, latex: ex.latex }] : []),
-          ...(ex.steps?.length ? [{ type: 'bullets' as const, items: ex.steps }] : []),
+          ...(ex.steps?.length
+            ? [{ type: 'bullets' as const, items: ex.steps }]
+            : []),
         ],
       });
     }
@@ -156,7 +169,9 @@ export function buildPresentationFromPlan(plan: PlanForSlides): Slide[] {
       blocks: [
         {
           type: 'bullets',
-          items: desarrollo?.activities.length ? desarrollo.activities : contents,
+          items: desarrollo?.activities.length
+            ? desarrollo.activities
+            : contents,
         },
       ],
       notes: desarrollo?.metacognition,
@@ -173,7 +188,12 @@ export function buildPresentationFromPlan(plan: PlanForSlides): Slide[] {
           prompt: e.statement,
           answer: e.answer,
         }))
-      : [{ type: 'bullets', items: desarrollo?.activities ?? ['Ejercicios guiados en parejas.'] }],
+      : [
+          {
+            type: 'bullets',
+            items: desarrollo?.activities ?? ['Ejercicios guiados en parejas.'],
+          },
+        ],
   });
 
   slides.push(

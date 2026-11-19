@@ -15,9 +15,9 @@ describe('handleNotFound', () => {
   });
 
   it('P2025 → NotFoundException con el mensaje', async () => {
-    await expect(handleNotFound(Promise.reject(p2025()), 'No existe')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      handleNotFound(Promise.reject(p2025()), 'No existe'),
+    ).rejects.toBeInstanceOf(NotFoundException);
     try {
       await handleNotFound(Promise.reject(p2025()), 'No existe');
       fail('debió lanzar');
@@ -28,7 +28,9 @@ describe('handleNotFound', () => {
 
   it('relanza otros errores sin transformar', async () => {
     const other = new Error('boom');
-    await expect(handleNotFound(Promise.reject(other), 'x')).rejects.toBe(other);
+    await expect(handleNotFound(Promise.reject(other), 'x')).rejects.toBe(
+      other,
+    );
   });
 
   it('relanza Prisma errors con otro código', async () => {

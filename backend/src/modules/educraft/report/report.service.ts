@@ -15,8 +15,19 @@ import { attendanceRate } from '../attendance/attendance.service';
 import { groupBy } from '../grading/grading.service';
 import { passingScore } from '../section/section.service';
 import { sectionLabel } from '../shared/zoned.util';
+import {
+  OFFICIAL_SITUATIONS,
+  renderBulletinHtml,
+  renderSectionBulletinsHtml,
+  safeFilePart,
+} from './bulletin-official.util';
 
-export type AlertKind = 'LOW_PERFORMANCE' | 'LOW_ATTENDANCE' | 'PENDING_DELIVERY' | 'SUSTAINED_LOW' | 'TO_GRADE';
+export type AlertKind =
+  | 'LOW_PERFORMANCE'
+  | 'LOW_ATTENDANCE'
+  | 'PENDING_DELIVERY'
+  | 'SUSTAINED_LOW'
+  | 'TO_GRADE';
 
 export interface AlertStudent {
   id: number;
@@ -38,26 +49,86 @@ export interface Alert {
 const LOW_ATTENDANCE = 80;
 const MIN_ATTENDANCE_RECORDS = 5;
 
-const BLOCK_RECOMMENDATIONS: Record<number, string[]> = {
-  1: [
-    'Pídale que le explique con sus palabras cómo resolvió un ejercicio del día.',
-    'Lean juntos situaciones cotidianas con números (recibos, ofertas) y conversen sobre ellas.',
-  ],
-  2: [
-    'Practiquen 15 minutos diarios de problemas cortos, pidiéndole que justifique cada paso.',
-    'Jueguen a estimar resultados antes de calcularlos y luego comprueben.',
-  ],
-  3: [
-    'Valore el esfuerzo y la perseverancia más que la respuesta correcta.',
-    'Establezcan una rutina estable de estudio y descanso.',
-  ],
-  4: [
-    'Use aplicaciones como calculadoras graficadoras para explorar juntos las tareas.',
-    'Relacionen la matemática con situaciones de salud y ambiente del hogar (consumo de agua, presupuesto).',
-  ],
+const BLOCK_GUIDANCE: Record<number, string> = {
+  1: 'lean en voz alta y expliquen con sus palabras lo que comprendieron',
+  2: 'resuelvan problemas cortos y justifiquen cada paso',
+  3: 'comenten juntos situaciones cotidianas de ética y ciudadanía',
+  4: 'relacionen los contenidos con el entorno, la salud y la tecnología',
 };
 
-const fullName = (s: { firstName: string; lastName: string }) => `${s.firstName} ${s.lastName}`;
+interface OfficialMeta {
+  directorName: string | null;
+  formPrefix: string;
+}
+
+interface GuidanceCompetence {
+  block: number;
+  name: string;
+  score: number | null;
+}
+
+const settingText = (value: unknown): string | null => {
+  if (typeof value === 'string') return value.trim() || null;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    for (const key of ['name', 'value', 'nombre']) {
+      const candidate = record[key];
+      if (typeof candidate === 'string' && candidate.trim())
+        return candidate.trim();
+    }
+  }
+  return null;
+};
+
+function familyGuidance(
+  competences: GuidanceCompetence[],
+  rate: number | null,
+  passing: number,
+) {
+  const scored = competences
+    .filter((c): c is GuidanceCompetence & { score: number } => c.score != null)
+    .sort((a, b) => b.score - a.score);
+  const strengths = scored.filter((c) => c.score >= Math.max(80, passing + 10));
+  const belowPassing = scored
+    .filter((c) => c.score < passing)
+    .sort((a, b) => a.score - b.score);
+  const focus = belowPassing.length ? belowPassing : scored.slice(-1);
+
+  const recommendations: string[] = [];
+  for (const c of focus.slice(0, 2)) {
+    recommendations.push(
+      `En ${c.name} (promedio ${c.score} de 100), ${BLOCK_GUIDANCE[c.block] ?? 'repasen juntos los indicadores de este bloque'} durante 15 minutos, tres veces por semana.`,
+    );
+  }
+  for (const c of strengths.slice(0, 1)) {
+    recommendations.push(
+      `Aprovechar el logro en ${c.name} (promedio ${c.score}) para que explique a otra persona los procedimientos aprendidos.`,
+    );
+  }
+  if (rate != null && rate < LOW_ATTENDANCE) {
+    recommendations.push(
+      `La asistencia registrada es ${Math.round(rate)}%, por debajo del ${LOW_ATTENDANCE}%: procure que asista con regularidad y justifique cada ausencia.`,
+    );
+  } else if (rate != null && rate >= 95) {
+    recommendations.push(
+      `La asistencia registrada es ${Math.round(rate)}%: mantenga la puntualidad y la participación en clase.`,
+    );
+  }
+  if (!recommendations.length) {
+    recommendations.push(
+      'Todavía no hay calificaciones ni asistencia registradas: acompañe una rutina estable de estudio, lectura y descanso.',
+    );
+  }
+
+  return {
+    strengths: strengths.map((c) => `${c.name} (promedio ${c.score})`),
+    improvements: focus.map((c) => `${c.name} (promedio ${c.score})`),
+    recommendations,
+  };
+}
+
+const fullName = (s: { firstName: string; lastName: string }) =>
+  `${s.firstName} ${s.lastName}`;
 
 @Injectable()
 export class ReportService {
@@ -70,67 +141,107 @@ export class ReportService {
 
   // ── Rendimiento por sección ───────────────────────
 
-  async sectionPerformance(teacherId: number, sectionId: number, period?: number) {
+  async sectionPerformance(
+    teacherId: number,
+    sectionId: number,
+    period?: number,
+  ) {
     const section = await this.scope.section(teacherId, sectionId);
     const passing = passingScore(section.schoolYear.gradingScale);
-    const [students, grades, finals, attendance, observations] = await Promise.all([
-      this.prisma.student.findMany({
-        where: { sectionId, deletedAt: null, isActive: true },
-        orderBy: [{ listNumber: 'asc' }, { lastName: 'asc' }],
-      }),
-      this.prisma.competenceGrade.findMany({ where: { sectionId } }),
-      this.prisma.finalGrade.findMany({ where: { sectionId } }),
-      this.prisma.attendance.groupBy({
-        by: ['studentId', 'status'],
-        where: { sectionId },
-        _count: { _all: true },
-      }),
-      this.prisma.studentObservation.groupBy({
-        by: ['studentId', 'type'],
-        where: { student: { sectionId } },
-        _count: { _all: true },
-      }),
-    ]);
+    const [students, grades, finals, attendance, observations] =
+      await Promise.all([
+        this.prisma.student.findMany({
+          where: { sectionId, deletedAt: null, isActive: true },
+          orderBy: [{ listNumber: 'asc' }, { lastName: 'asc' }],
+        }),
+        this.prisma.competenceGrade.findMany({ where: { sectionId } }),
+        this.prisma.finalGrade.findMany({ where: { sectionId } }),
+        this.prisma.attendance.groupBy({
+          by: ['studentId', 'status'],
+          where: { sectionId },
+          _count: { _all: true },
+        }),
+        this.prisma.studentObservation.groupBy({
+          by: ['studentId', 'type'],
+          where: { student: { sectionId } },
+          _count: { _all: true },
+        }),
+      ]);
 
     const gradesByStudent = groupBy(grades, (g) => g.studentId);
     const finalByStudent = new Map(finals.map((f) => [f.studentId, f]));
-    const attendanceByStudent = new Map<number, Record<AttendanceStatus, number>>();
+    const attendanceByStudent = new Map<
+      number,
+      Record<AttendanceStatus, number>
+    >();
     for (const a of attendance) {
       if (!attendanceByStudent.has(a.studentId)) {
-        attendanceByStudent.set(a.studentId, { PRESENT: 0, LATE: 0, ABSENT: 0, EXCUSED: 0 });
+        attendanceByStudent.set(a.studentId, {
+          PRESENT: 0,
+          LATE: 0,
+          ABSENT: 0,
+          EXCUSED: 0,
+        });
       }
       attendanceByStudent.get(a.studentId)![a.status] = a._count._all;
     }
     const obsByStudent = groupBy(observations, (o) => o.studentId);
 
     const rows = students.map((s) => {
-      const summary = summarizeStudent(gradesByStudent.get(s.id) ?? [], finalByStudent.get(s.id) ?? null, passing);
-      const score = period ? summary.periodAverages[period] : summary.finalScore;
+      const summary = summarizeStudent(
+        gradesByStudent.get(s.id) ?? [],
+        finalByStudent.get(s.id) ?? null,
+        passing,
+      );
+      const score = period
+        ? summary.periodAverages[period]
+        : summary.finalScore;
       const blocks = Object.fromEntries(
         GRADING_BLOCKS.map(({ block }) => [
           block,
-          period ? summary.effective[block][period] : summary.blockAverages[block],
+          period
+            ? summary.effective[block][period]
+            : summary.blockAverages[block],
         ]),
       ) as Record<number, number | null>;
-      const counts = attendanceByStudent.get(s.id) ?? { PRESENT: 0, LATE: 0, ABSENT: 0, EXCUSED: 0 };
+      const counts = attendanceByStudent.get(s.id) ?? {
+        PRESENT: 0,
+        LATE: 0,
+        ABSENT: 0,
+        EXCUSED: 0,
+      };
       return {
-        student: { id: s.id, listNumber: s.listNumber, firstName: s.firstName, lastName: s.lastName },
+        student: {
+          id: s.id,
+          listNumber: s.listNumber,
+          firstName: s.firstName,
+          lastName: s.lastName,
+        },
         score,
         level: achievementLevel(score, passing),
         blocks,
         situation: summary.situation,
         attendance: { counts, rate: attendanceRate(counts) },
-        observations: Object.fromEntries((obsByStudent.get(s.id) ?? []).map((o) => [o.type, o._count._all])),
+        observations: Object.fromEntries(
+          (obsByStudent.get(s.id) ?? []).map((o) => [o.type, o._count._all]),
+        ),
       };
     });
 
     const avg = (values: Array<number | null>) => {
       const list = values.filter((v): v is number => v != null);
-      return list.length ? Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10 : null;
+      return list.length
+        ? Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10
+        : null;
     };
     const blockAverages = GRADING_BLOCKS.map(({ block, code, name }) => {
       const values = rows.map((r) => r.blocks[block]);
-      const distribution: Record<AchievementLevel, number> = { INICIO: 0, EN_PROCESO: 0, LOGRADO: 0, EXCELENTE: 0 };
+      const distribution: Record<AchievementLevel, number> = {
+        INICIO: 0,
+        EN_PROCESO: 0,
+        LOGRADO: 0,
+        EXCELENTE: 0,
+      };
       for (const v of values) {
         const level = achievementLevel(v, passing);
         if (level) distribution[level]++;
@@ -139,7 +250,9 @@ export class ReportService {
     });
 
     const totals = { PRESENT: 0, LATE: 0, ABSENT: 0, EXCUSED: 0 };
-    for (const r of rows) for (const k of Object.keys(totals) as AttendanceStatus[]) totals[k] += r.attendance.counts[k];
+    for (const r of rows)
+      for (const k of Object.keys(totals) as AttendanceStatus[])
+        totals[k] += r.attendance.counts[k];
 
     return {
       section: {
@@ -155,7 +268,8 @@ export class ReportService {
         students: rows.length,
         average: avg(rows.map((r) => r.score)),
         attendanceRate: attendanceRate(totals),
-        approved: rows.filter((r) => r.score != null && r.score >= passing).length,
+        approved: rows.filter((r) => r.score != null && r.score >= passing)
+          .length,
         atRisk: rows.filter((r) => r.score != null && r.score < passing).length,
       },
       blocks: blockAverages,
@@ -164,9 +278,17 @@ export class ReportService {
   }
 
   /** Reporte detallado de logro curricular de un bloque (modal del radar). */
-  async competenceDetail(teacherId: number, sectionId: number, block: number, period?: number) {
+  async competenceDetail(
+    teacherId: number,
+    sectionId: number,
+    block: number,
+    period?: number,
+  ) {
     const perf = await this.sectionPerformance(teacherId, sectionId, period);
-    const levels: Record<AchievementLevel, Array<{ id: number; name: string; score: number | null }>> = {
+    const levels: Record<
+      AchievementLevel,
+      Array<{ id: number; name: string; score: number | null }>
+    > = {
       INICIO: [],
       EN_PROCESO: [],
       LOGRADO: [],
@@ -175,7 +297,12 @@ export class ReportService {
     for (const r of perf.rows) {
       const score = r.blocks[block];
       const level = achievementLevel(score, perf.section.passing);
-      if (level) levels[level].push({ id: r.student.id, name: fullName(r.student), score });
+      if (level)
+        levels[level].push({
+          id: r.student.id,
+          name: fullName(r.student),
+          score,
+        });
     }
     return {
       section: perf.section,
@@ -189,7 +316,9 @@ export class ReportService {
     await this.scope.section(teacherId, sectionId);
     const observations = await this.prisma.studentObservation.findMany({
       where: { student: { sectionId, deletedAt: null } },
-      include: { student: { select: { id: true, firstName: true, lastName: true } } },
+      include: {
+        student: { select: { id: true, firstName: true, lastName: true } },
+      },
       orderBy: { date: 'desc' },
     });
     const byType = { CONDUCT: 0, PARTICIPATION: 0, SITUATION: 0 };
@@ -199,12 +328,62 @@ export class ReportService {
 
   // ── Boletín e informe para padres ─────────────────
 
+  private async officialMeta(): Promise<OfficialMeta> {
+    const settings = await this.prisma.appSetting.findMany({
+      where: { key: { in: ['reports.directorName', 'reports.formPrefix'] } },
+      select: { key: true, value: true },
+    });
+    const byKey = new Map(
+      settings.map((setting) => [setting.key, setting.value]),
+    );
+    return {
+      directorName: settingText(byKey.get('reports.directorName')),
+      formPrefix: settingText(byKey.get('reports.formPrefix')) ?? 'EC',
+    };
+  }
+
   async bulletin(teacherId: number, studentId: number) {
     const student = await this.scope.student(teacherId, studentId);
     return this.buildBulletin(student.id, student.sectionId);
   }
 
-  private async buildBulletin(studentId: number, sectionId: number) {
+  async bulletinExport(teacherId: number, studentId: number) {
+    const student = await this.scope.student(teacherId, studentId);
+    const bulletin = await this.buildBulletin(student.id, student.sectionId);
+    return {
+      html: renderBulletinHtml(bulletin),
+      fileName: `boletin-${safeFilePart(`${bulletin.student.lastName}-${bulletin.student.firstName}`)}.html`,
+    };
+  }
+
+  async sectionBulletinExport(teacherId: number, sectionId: number) {
+    const section = await this.scope.section(teacherId, sectionId);
+    const meta = await this.officialMeta();
+    const students = await this.prisma.student.findMany({
+      where: { sectionId, deletedAt: null, isActive: true },
+      orderBy: [{ listNumber: 'asc' }, { lastName: 'asc' }],
+      select: { id: true },
+    });
+    const bulletins = await Promise.all(
+      students.map((student) =>
+        this.buildBulletin(student.id, sectionId, meta),
+      ),
+    );
+    return {
+      html: renderSectionBulletinsHtml(
+        `Boletines ${section.grade.name} · Sección ${section.name} · ${section.schoolYear.name}`,
+        bulletins,
+      ),
+      fileName: `boletines-seccion-${safeFilePart(`${sectionId}-${section.schoolYear.name}`)}.html`,
+    };
+  }
+
+  private async buildBulletin(
+    studentId: number,
+    sectionId: number,
+    meta?: OfficialMeta,
+  ) {
+    const officialMeta = meta ?? (await this.officialMeta());
     const [student, grades, final] = await Promise.all([
       this.prisma.student.findUniqueOrThrow({
         where: { id: studentId },
@@ -219,11 +398,23 @@ export class ReportService {
         },
       }),
       this.prisma.competenceGrade.findMany({ where: { studentId, sectionId } }),
-      this.prisma.finalGrade.findUnique({ where: { studentId_sectionId: { studentId, sectionId } } }),
+      this.prisma.finalGrade.findUnique({
+        where: { studentId_sectionId: { studentId, sectionId } },
+      }),
     ]);
     const passing = passingScore(student.section.schoolYear.gradingScale);
     const summary = summarizeStudent(grades, final, passing);
     const teacher = student.section.teacher;
+    const ciclo =
+      student.section.grade.cycle === 1 ? 'Primer Ciclo' : 'Segundo Ciclo';
+    const nivel = 'Secundario';
+    const centro = teacher.teacherProfile?.institution ?? null;
+    const distrito = teacher.teacherProfile?.district ?? null;
+    const firma = teacher.teacherProfile?.signature ?? null;
+    const nombresDirector = officialMeta.directorName;
+    const anioEscolar = student.section.schoolYear.name;
+    const numeroFormulario = `${officialMeta.formPrefix}-${anioEscolar}-${student.sectionId}-${String(student.listNumber ?? student.id).padStart(3, '0')}`;
+    const situationLabel = OFFICIAL_SITUATIONS[summary.situation];
     return {
       student: {
         id: student.id,
@@ -231,19 +422,44 @@ export class ReportService {
         firstName: student.firstName,
         lastName: student.lastName,
       },
+      sectionId: student.sectionId,
       grade: student.section.grade.name,
-      cycle: student.section.grade.cycle === 1 ? 'Primer Ciclo' : 'Segundo Ciclo',
-      level: 'Secundario',
+      cycle: ciclo,
+      level: nivel,
       section: student.section.name,
       subject: student.section.subject,
-      schoolYear: student.section.schoolYear.name,
+      schoolYear: anioEscolar,
+      centro,
+      distrito,
+      anioEscolar,
+      numeroFormulario,
+      nombresDirector,
+      firma,
+      situationCode: summary.situation,
+      situationLabel,
+      official: {
+        centro,
+        distrito,
+        anioEscolar,
+        numeroFormulario,
+        nombresDirector,
+        firma,
+        ciclo,
+        nivel,
+        situacion: { code: summary.situation, label: situationLabel },
+      },
       teacher: {
         name: `${teacher.teacherProfile?.displayTitle ?? ''} ${teacher.firstName} ${teacher.lastName}`.trim(),
-        institution: teacher.teacherProfile?.institution ?? null,
-        signature: teacher.teacherProfile?.signature ?? null,
+        institution: centro,
+        signature: firma,
       },
       blocks: GRADING_BLOCKS,
-      entries: grades.map((g) => ({ period: g.period, block: g.block, score: g.score, recovery: g.recovery })),
+      entries: grades.map((g) => ({
+        period: g.period,
+        block: g.block,
+        score: g.score,
+        recovery: g.recovery,
+      })),
       final: final && {
         completiveScore: final.completiveScore,
         extraordinaryScore: final.extraordinaryScore,
@@ -274,30 +490,29 @@ export class ReportService {
 
     const competences = GRADING_BLOCKS.map(({ block, name }) => {
       const score = bulletin.summary.blockAverages[block];
-      return { block, name, score, level: achievementLevel(score, bulletin.passing) };
+      return {
+        block,
+        name,
+        score,
+        level: achievementLevel(score, bulletin.passing),
+      };
     });
-    const strengths = competences.filter((c) => c.score != null && c.score >= 80).map((c) => c.name);
-    const improvements = competences.filter((c) => c.score != null && c.score < bulletin.passing);
     const rate = attendanceRate(counts);
-    const recommendations = [
-      ...improvements.flatMap((c) => BLOCK_RECOMMENDATIONS[c.block]),
-      ...(rate != null && rate < LOW_ATTENDANCE
-        ? ['La asistencia regular es clave: procure que no falte a clases y justifique las ausencias.']
-        : []),
-    ];
-    if (!recommendations.length) {
-      recommendations.push('Continúe acompañando su rutina de estudio y celebre sus logros.');
-    }
+    const guidance = familyGuidance(competences, rate, bulletin.passing);
 
     return {
       ...bulletin,
       generatedAt: new Date().toISOString(),
       attendance: { counts, total: attendance.length, rate },
       competences,
-      strengths,
-      improvements: improvements.map((c) => c.name),
-      observations: observations.map((o) => ({ type: o.type, content: o.content, date: formatDateOnly(o.date) })),
-      recommendations,
+      strengths: guidance.strengths,
+      improvements: guidance.improvements,
+      observations: observations.map((o) => ({
+        type: o.type,
+        content: o.content,
+        date: formatDateOnly(o.date),
+      })),
+      recommendations: guidance.recommendations,
     };
   }
 
@@ -305,14 +520,24 @@ export class ReportService {
     await this.scope.student(teacherId, studentId);
     const token = randomBytes(24).toString('base64url');
     return this.prisma.parentReportLink.create({
-      data: { token, studentId, teacherId, expiresAt: addDays(new Date(), Math.min(Math.max(days, 1), 180)) },
+      data: {
+        token,
+        studentId,
+        teacherId,
+        expiresAt: addDays(new Date(), Math.min(Math.max(days, 1), 180)),
+      },
     });
   }
 
   async revokeShare(teacherId: number, linkId: number) {
-    const link = await this.prisma.parentReportLink.findFirst({ where: { id: linkId, teacherId } });
+    const link = await this.prisma.parentReportLink.findFirst({
+      where: { id: linkId, teacherId },
+    });
     if (!link) throw new NotFoundException('Enlace no encontrado');
-    await this.prisma.parentReportLink.update({ where: { id: linkId }, data: { revokedAt: new Date() } });
+    await this.prisma.parentReportLink.update({
+      where: { id: linkId },
+      data: { revokedAt: new Date() },
+    });
   }
 
   /** Acceso público (familia) mediante token. */
@@ -321,12 +546,24 @@ export class ReportService {
       where: { token },
       include: { student: true },
     });
-    if (!link || link.revokedAt || link.expiresAt < new Date() || link.student.deletedAt) {
+    if (
+      !link ||
+      link.revokedAt ||
+      link.expiresAt < new Date() ||
+      link.student.deletedAt
+    ) {
       throw new NotFoundException('El enlace no es válido o ha expirado');
     }
-    const report = await this.buildParentReport(link.studentId, link.student.sectionId);
+    const report = await this.buildParentReport(
+      link.studentId,
+      link.student.sectionId,
+    );
     // La firma del docente no se expone en el enlace público.
-    return { ...report, teacher: { ...report.teacher, signature: null }, expiresAt: link.expiresAt };
+    return {
+      ...report,
+      teacher: { ...report.teacher, signature: null },
+      expiresAt: link.expiresAt,
+    };
   }
 
   // ── Alertas de bajo rendimiento ───────────────────
@@ -342,7 +579,11 @@ export class ReportService {
     const alerts: Alert[] = [];
 
     for (const section of sections) {
-      const ref = { id: section.id, name: section.name, grade: section.grade.name };
+      const ref = {
+        id: section.id,
+        name: section.name,
+        grade: section.grade.name,
+      };
       const label = sectionLabel(section.grade.name, section.name);
       const perf = await this.sectionPerformance(teacherId, section.id);
       const passing = perf.section.passing;
@@ -355,20 +596,37 @@ export class ReportService {
           title: `${low.length} estudiante${low.length > 1 ? 's' : ''} con bajo rendimiento`,
           description: `${label}: promedio por debajo de ${passing}.`,
           section: ref,
-          students: low.map((r) => ({ id: r.student.id, name: fullName(r.student), value: r.score })),
+          students: low.map((r) => ({
+            id: r.student.id,
+            name: fullName(r.student),
+            value: r.score,
+          })),
         });
       }
 
-      const grades = await this.prisma.competenceGrade.findMany({ where: { sectionId: section.id } });
+      const grades = await this.prisma.competenceGrade.findMany({
+        where: { sectionId: section.id },
+      });
       const byStudent = groupBy(grades, (g) => g.studentId);
       const sustained: AlertStudent[] = [];
       for (const r of perf.rows) {
-        const summary = summarizeStudent(byStudent.get(r.student.id) ?? [], null, passing);
+        const summary = summarizeStudent(
+          byStudent.get(r.student.id) ?? [],
+          null,
+          passing,
+        );
         const periods = [1, 2, 3, 4]
           .map((p) => summary.periodAverages[p])
           .filter((v): v is number => v != null);
-        if (periods.length >= 2 && periods.slice(-2).every((v) => v < passing)) {
-          sustained.push({ id: r.student.id, name: fullName(r.student), value: periods[periods.length - 1] });
+        if (
+          periods.length >= 2 &&
+          periods.slice(-2).every((v) => v < passing)
+        ) {
+          sustained.push({
+            id: r.student.id,
+            name: fullName(r.student),
+            value: periods[periods.length - 1],
+          });
         }
       }
       if (sustained.length) {
@@ -383,8 +641,15 @@ export class ReportService {
       }
 
       const lowAttendance = perf.rows.filter((r) => {
-        const total = Object.values(r.attendance.counts).reduce((a, b) => a + b, 0);
-        return total >= MIN_ATTENDANCE_RECORDS && r.attendance.rate != null && r.attendance.rate < LOW_ATTENDANCE;
+        const total = Object.values(r.attendance.counts).reduce(
+          (a, b) => a + b,
+          0,
+        );
+        return (
+          total >= MIN_ATTENDANCE_RECORDS &&
+          r.attendance.rate != null &&
+          r.attendance.rate < LOW_ATTENDANCE
+        );
       });
       if (lowAttendance.length) {
         alerts.push({
@@ -406,10 +671,14 @@ export class ReportService {
         include: { scores: true },
       });
       const studentIds = perf.rows.map((r) => r.student.id);
-      const names = new Map(perf.rows.map((r) => [r.student.id, fullName(r.student)]));
+      const names = new Map(
+        perf.rows.map((r) => [r.student.id, fullName(r.student)]),
+      );
 
       const pendingDelivery = new Map<number, string[]>();
-      for (const a of assessments.filter((x) => x.requiresDelivery && (x.dueDate ?? x.date) < today)) {
+      for (const a of assessments.filter(
+        (x) => x.requiresDelivery && (x.dueDate ?? x.date) < today,
+      )) {
         for (const id of studentIds) {
           const s = a.scores.find((x) => x.studentId === id);
           if (!s?.delivered) {
@@ -462,16 +731,25 @@ export class ReportService {
   @Cron('0 30 6 * * 1-6')
   async notifyAlerts() {
     const teachers = await this.prisma.section.findMany({
-      where: { deletedAt: null, schoolYear: { isActive: true, deletedAt: null } },
+      where: {
+        deletedAt: null,
+        schoolYear: { isActive: true, deletedAt: null },
+      },
       distinct: ['teacherId'],
       select: { teacherId: true },
     });
     const since = toDateOnly(new Date());
     for (const { teacherId } of teachers) {
       try {
-        const alerts = (await this.alerts(teacherId)).filter((a) => a.severity !== 'info');
+        const alerts = (await this.alerts(teacherId)).filter(
+          (a) => a.severity !== 'info',
+        );
         for (const alert of alerts) {
-          const title = `${alert.title} · ${sectionLabel(alert.section.grade, alert.section.name)}`.slice(0, 150);
+          const title =
+            `${alert.title} · ${sectionLabel(alert.section.grade, alert.section.name)}`.slice(
+              0,
+              150,
+            );
           const exists = await this.prisma.notification.findFirst({
             where: { userId: teacherId, title, createdAt: { gte: since } },
           });
@@ -481,13 +759,18 @@ export class ReportService {
               userId: teacherId,
               type: alert.severity === 'critical' ? 'ERROR' : 'WARNING',
               title,
-              message: `${alert.description} ${alert.students.map((s) => s.name).slice(0, 5).join(', ')}`.trim(),
+              message: `${alert.description} ${alert.students
+                .map((s) => s.name)
+                .slice(0, 5)
+                .join(', ')}`.trim(),
               link: '/app/seguimiento',
             },
           });
         }
       } catch (err) {
-        this.logger.warn(`Alertas del docente ${teacherId}: ${(err as Error).message}`);
+        this.logger.warn(
+          `Alertas del docente ${teacherId}: ${(err as Error).message}`,
+        );
       }
     }
   }

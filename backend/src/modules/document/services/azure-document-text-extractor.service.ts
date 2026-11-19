@@ -11,7 +11,7 @@ import { ConfigService } from '@nestjs/config';
 export class AzureDocumentTextExtractorService implements DocumentTextExtractorService {
   private client: DocumentAnalysisClient;
 
- constructor(private readonly configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     const endpoint = this.configService.get<string>('AZURE_DI_ENDPOINT');
     const key = this.configService.get<string>('AZURE_DI_KEY');
 

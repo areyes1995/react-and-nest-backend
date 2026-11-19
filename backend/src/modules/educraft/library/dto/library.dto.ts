@@ -1,10 +1,21 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsArray, IsEnum, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ResourceCategory } from '@prisma/client';
 
 /** Las etiquetas llegan como arreglo (JSON) o "a, b, c" (multipart). */
-const toTags = ({ value }: { value: unknown }) =>
+export const toTags = ({ value }: { value: unknown }) =>
   (Array.isArray(value) ? value : String(value ?? '').split(','))
     .map((t) => String(t).trim().toLowerCase())
     .filter(Boolean);
@@ -33,8 +44,46 @@ export class CreateResourceDto {
 
   @IsOptional()
   @IsUrl({ require_tld: false })
-  @ApiProperty({ required: false, description: 'Enlace externo (si no se sube archivo)' })
+  @ApiProperty({
+    required: false,
+    description: 'Enlace externo (si no se sube archivo)',
+  })
   url?: string;
 }
 
 export class UpdateResourceDto extends PartialType(CreateResourceDto) {}
+
+/** Alta/baja masiva de etiquetas sobre un recurso existente. */
+export class BulkTagsDto {
+  @IsOptional()
+  @Transform(toTags)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  @ApiProperty({ required: false, type: [String] })
+  add?: string[];
+
+  @IsOptional()
+  @Transform(toTags)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  @ApiProperty({ required: false, type: [String] })
+  remove?: string[];
+}
+
+export class ShareResourceDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(180)
+  @ApiProperty({
+    required: false,
+    default: 30,
+    description: 'Días de vigencia del enlace',
+  })
+  days?: number;
+}

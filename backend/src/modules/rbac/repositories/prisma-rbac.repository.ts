@@ -47,7 +47,10 @@ export class PrismaRbacRepository implements RbacRepository {
     });
   }
 
-  async getRoleById(id: number, tx?: PrismaTx): Promise<RoleWithPermissions | null> {
+  async getRoleById(
+    id: number,
+    tx?: PrismaTx,
+  ): Promise<RoleWithPermissions | null> {
     return this.client(tx).role.findFirst({
       where: { id, deletedAt: null },
       include: ROLE_INCLUDE,

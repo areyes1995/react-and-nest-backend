@@ -13,9 +13,16 @@ import {
   Max,
   MaxLength,
   Min,
+  Validate,
   ValidateNested,
 } from 'class-validator';
-import { Difficulty, EvaluationType, InstrumentType, QuestionType } from '@prisma/client';
+import {
+  Difficulty,
+  EvaluationType,
+  InstrumentType,
+  QuestionType,
+} from '@prisma/client';
+import { ValidInstrumentContentConstraint } from './instrument-content';
 
 export class CreateQuestionDto {
   @IsOptional()
@@ -48,7 +55,10 @@ export class CreateQuestionDto {
   statement!: string;
 
   @IsOptional()
-  @ApiProperty({ required: false, description: 'Opciones o pares para relacionar' })
+  @ApiProperty({
+    required: false,
+    description: 'Opciones o pares para relacionar',
+  })
   options?: unknown;
 
   @IsOptional()
@@ -228,6 +238,7 @@ export class CreateInstrumentDto {
   fundamentalId?: number;
 
   @IsObject()
+  @Validate(ValidInstrumentContentConstraint)
   @ApiProperty({ description: 'Contenido del instrumento según su tipo' })
   content!: Record<string, unknown>;
 
@@ -238,3 +249,74 @@ export class CreateInstrumentDto {
 }
 
 export class UpdateInstrumentDto extends PartialType(CreateInstrumentDto) {}
+
+export class GradeExamDto {
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @ApiProperty({ required: false, default: 0 })
+  version?: number;
+
+  @IsObject()
+  @ApiProperty({
+    description: 'Respuestas por número de pregunta',
+    type: Object,
+  })
+  answers!: Record<number, unknown>;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @ApiProperty({
+    required: false,
+    description: 'Estudiante al que se le guarda la calificación',
+  })
+  studentId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @ApiProperty({
+    required: false,
+    description: 'Actividad donde se guarda la calificación',
+  })
+  assessmentId?: number;
+}
+
+export class InstrumentScoreEntryDto {
+  @IsInt()
+  @Min(1)
+  @ApiProperty()
+  studentId!: number;
+
+  @IsObject()
+  @ApiProperty({
+    description: 'Marcas del instrumento (niveles, casillas o valores)',
+  })
+  instrumentData!: Record<string, unknown>;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({ required: false })
+  score?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ required: false })
+  delivered?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false })
+  feedback?: string;
+}
+
+export class SaveInstrumentScoresDto {
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => InstrumentScoreEntryDto)
+  @ApiProperty({ type: [InstrumentScoreEntryDto] })
+  entries!: InstrumentScoreEntryDto[];
+}

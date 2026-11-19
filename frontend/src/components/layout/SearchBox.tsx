@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Clock, FileText, Search, Sparkles, UserRound, X } from 'lucide-react'
@@ -12,10 +12,10 @@ import { RESOURCE_CATEGORIES, INSTRUMENT_TYPES } from '@lib/labels'
 type Scope = 'all' | 'resources' | 'evaluations' | 'students'
 
 const SCOPES: Array<{ key: Scope; label: string; icon: string; className: string }> = [
-  { key: 'all', label: 'Todo', icon: '🔍', className: 'bg-soft-pink text-pink-600' },
-  { key: 'resources', label: 'Recursos', icon: '📚', className: 'bg-soft-purple text-violet-600' },
-  { key: 'evaluations', label: 'Evaluaciones', icon: '📝', className: 'bg-soft-orange text-orange-600' },
-  { key: 'students', label: 'Estudiantes', icon: '👤', className: 'bg-soft-green text-emerald-600' },
+  { key: 'all', label: 'Todo', icon: '🔍', className: 'bg-soft-pink text-pink-700 dark:text-pink-300' },
+  { key: 'resources', label: 'Recursos', icon: '📚', className: 'bg-soft-purple text-violet-700 dark:text-violet-300' },
+  { key: 'evaluations', label: 'Evaluaciones', icon: '📝', className: 'bg-soft-orange text-orange-700 dark:text-orange-300' },
+  { key: 'students', label: 'Estudiantes', icon: '👤', className: 'bg-soft-green text-emerald-700 dark:text-emerald-300' },
 ]
 
 const SESSION_PREFIX = /^dise[ñn]ar sesi[oó]n de\s+/i
@@ -31,6 +31,7 @@ export function SearchBox() {
   const [recent, setRecent] = useLocalStorage<string[]>('educraft_recent_searches', ['Función cuadrática', 'Rúbrica de polinomios'])
   const debounced = useDebounce(text, 250)
   const inputRef = useRef<HTMLInputElement>(null)
+  const inputId = useId()
 
   useEffect(() => {
     const term = debounced.trim()
@@ -92,9 +93,13 @@ export function SearchBox() {
     <div className="relative w-full max-w-md">
       {open && createPortal(<div className="fixed inset-0 z-[55] bg-[var(--overlay)]" onClick={close} />, document.body)}
       <div className={cn('relative', open && 'z-[60]')}>
+        <label htmlFor={inputId} className="sr-only">
+          Buscar en Educraft XYZ
+        </label>
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" />
         <input
           ref={inputRef}
+          id={inputId}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onFocus={() => setOpen(true)}
@@ -102,6 +107,8 @@ export function SearchBox() {
             if (e.key === 'Enter') submit()
             if (e.key === 'Escape') close()
           }}
+          aria-expanded={open}
+          aria-controls={`${inputId}-resultados`}
           placeholder="Buscar en Educraft XYZ…"
           className={cn(
             'h-11 w-full border border-line bg-surface pl-11 pr-10 text-sm text-ink shadow-card outline-none transition placeholder:text-ink-3',
@@ -109,19 +116,26 @@ export function SearchBox() {
           )}
         />
         {text && (
-          <button className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3" onClick={() => setText('')} aria-label="Limpiar">
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-ink-3"
+            onClick={() => setText('')}
+            aria-label="Limpiar búsqueda"
+          >
             <X className="h-4 w-4" />
           </button>
         )}
 
         {open && (
-          <div className="absolute inset-x-0 top-full animate-fade-in rounded-b-2xl border border-t-0 border-line bg-surface p-4 shadow-pop">
+          <div id={`${inputId}-resultados`} className="absolute inset-x-0 top-full animate-fade-in rounded-b-2xl border border-t-0 border-line bg-surface p-4 shadow-pop">
             <div className="mb-3 flex flex-wrap gap-2">
               {SCOPES.map((s) => (
                 <button
                   key={s.key}
+                  type="button"
+                  aria-pressed={scope === s.key}
                   onClick={() => setScope(s.key)}
-                  className={cn('pill px-3 py-1 text-xs transition', s.className, scope === s.key ? 'ring-2 ring-violet-300 dark:ring-violet-700' : 'opacity-75 hover:opacity-100')}
+                  className={cn('pill min-h-11 px-3 py-1 text-xs transition', s.className, scope === s.key ? 'ring-2 ring-violet-300 dark:ring-violet-700' : 'opacity-75 hover:opacity-100')}
                 >
                   <span>{s.icon}</span> {s.label}
                 </button>
@@ -130,8 +144,9 @@ export function SearchBox() {
 
             {sessionTopic ? (
               <button
+                type="button"
                 onClick={submit}
-                className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-pink-50 to-violet-50 p-3 text-left dark:from-pink-950/30 dark:to-violet-950/30"
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl bg-gradient-to-r from-pink-50 to-violet-50 p-3 text-left dark:from-pink-950/30 dark:to-violet-950/30"
               >
                 <Sparkles className="h-5 w-5 text-brand-pink" />
                 <span className="text-sm text-ink">
@@ -145,21 +160,21 @@ export function SearchBox() {
                 {results?.students.length ? (
                   <Group title="Estudiantes">
                     {results.students.map((s) => (
-                      <ResultRow key={`s${s.id}`} icon={<UserRound className="h-4 w-4 text-emerald-500" />} title={s.name} meta={s.section} onClick={() => go(`/app/estudiantes/${s.id}`, s.name)} />
+                      <ResultRow key={`s${s.id}`} icon={<UserRound className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />} title={s.name} meta={s.section} onClick={() => go(`/app/estudiantes/${s.id}`, s.name)} />
                     ))}
                   </Group>
                 ) : null}
                 {results?.lessonPlans.length ? (
                   <Group title="Planes de clase">
                     {results.lessonPlans.map((p) => (
-                      <ResultRow key={`p${p.id}`} icon={<BookOpen className="h-4 w-4 text-violet-500" />} title={p.title} meta={p.topic} onClick={() => go(`/app/planificacion/planes/${p.id}`, p.title)} />
+                      <ResultRow key={`p${p.id}`} icon={<BookOpen className="h-4 w-4 text-violet-600 dark:text-violet-300" />} title={p.title} meta={p.topic} onClick={() => go(`/app/planificacion/planes/${p.id}`, p.title)} />
                     ))}
                   </Group>
                 ) : null}
                 {results?.resources.length ? (
                   <Group title="Recursos">
                     {results.resources.map((r) => (
-                      <ResultRow key={`r${r.id}`} icon={<FileText className="h-4 w-4 text-pink-500" />} title={r.title} meta={RESOURCE_CATEGORIES[r.category].label} onClick={() => go(`/app/recursos?q=${encodeURIComponent(r.title)}`, r.title)} />
+                      <ResultRow key={`r${r.id}`} icon={<FileText className="h-4 w-4 text-pink-600 dark:text-pink-300" />} title={r.title} meta={RESOURCE_CATEGORIES[r.category].label} onClick={() => go(`/app/recursos?q=${encodeURIComponent(r.title)}`, r.title)} />
                     ))}
                   </Group>
                 ) : null}
@@ -168,7 +183,7 @@ export function SearchBox() {
                     {results.evaluations.map((e) => (
                       <ResultRow
                         key={`e${e.kind}${e.id}`}
-                        icon={<FileText className="h-4 w-4 text-orange-500" />}
+                        icon={<FileText className="h-4 w-4 text-orange-600 dark:text-orange-300" />}
                         title={e.title}
                         meta={e.kind === 'EXAM' ? 'Examen' : INSTRUMENT_TYPES[e.kind as keyof typeof INSTRUMENT_TYPES]}
                         onClick={() => go(e.kind === 'EXAM' ? `/app/evaluacion/examenes/${e.id}` : `/app/evaluacion?tab=instrumentos&id=${e.id}`, e.title)}
@@ -183,13 +198,13 @@ export function SearchBox() {
                 <ul className="mb-3 space-y-1">
                   {recent.map((r) => (
                     <li key={r}>
-                      <button onClick={() => setText(r)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-ink-2 hover:bg-surface-3">
+                      <button type="button" onClick={() => setText(r)} className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-ink-2 hover:bg-surface-3">
                         <Clock className="h-4 w-4 text-ink-3" /> {r}
                       </button>
                     </li>
                   ))}
                 </ul>
-                <div className="rounded-xl bg-gradient-to-r from-pink-50 via-fuchsia-50 to-violet-50 p-3 text-xs text-violet-800 dark:from-pink-950/30 dark:to-violet-950/30 dark:text-violet-200">
+                <div className="rounded-xl bg-gradient-to-r from-pink-50 via-fuchsia-50 to-violet-50 p-3 text-xs text-violet-800 dark:from-pink-950/30 dark:via-fuchsia-950/30 dark:to-violet-950/30 dark:text-violet-200">
                   <Sparkles className="mr-1 inline h-4 w-4 text-brand-pink" />
                   ¿Quieres que la IA redacte una clase? Escribe <b>“Diseñar sesión de…”</b>
                 </div>
@@ -213,7 +228,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 function ResultRow({ icon, title, meta, onClick }: { icon: React.ReactNode; title: string; meta?: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-3">
+    <button type="button" onClick={onClick} className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-3">
       {icon}
       <span className="min-w-0 flex-1 truncate text-sm text-ink">{title}</span>
       {meta && <span className="truncate text-xs text-ink-3">{meta}</span>}

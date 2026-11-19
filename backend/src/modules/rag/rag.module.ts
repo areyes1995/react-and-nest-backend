@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from 'prisma/prisma.module';
+import { DocumentModule } from '../document/document.module';
 import { RagController } from './controllers/rag.controller';
 import { PostgresRagService } from './services/postgres-rag.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, DocumentModule],
   controllers: [RagController],
   providers: [
     {

@@ -46,6 +46,13 @@ model Attendance {
   status    AttendanceStatus
   note      String?          @db.VarChar(255)
 
+  /// Justificación de la inasistencia o tardanza: motivo, detalle y
+  /// referencia opcional al documento de soporte (URL o clave de almacenamiento).
+  justificationReason    String?   @db.VarChar(60)
+  justificationNote      String?   @db.Text
+  justificationAttachment String?  @db.VarChar(500)
+  justifiedAt            DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

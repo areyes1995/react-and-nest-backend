@@ -50,7 +50,8 @@ export class RagTextSearchQueryDto {
   @IsString()
   @IsOptional()
   @ApiProperty({
-    description: 'Filtro opcional por nivel de sensibilidad (internal, confidential, etc.).',
+    description:
+      'Filtro opcional por nivel de sensibilidad (internal, confidential, etc.).',
     required: false,
   })
   sensitivity?: string;

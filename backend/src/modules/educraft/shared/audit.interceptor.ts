@@ -35,15 +35,18 @@ export class AuditInterceptor implements NestInterceptor {
       tap((result: unknown) => {
         const idFromResult =
           result && typeof result === 'object' && 'id' in result
-            ? Number((result as { id: unknown }).id)
+            ? Number(result.id)
             : undefined;
         const idFromParams = req.params?.id ? Number(req.params.id) : undefined;
-        const entityId = Number.isFinite(idFromParams) ? idFromParams : idFromResult;
+        const entityId = Number.isFinite(idFromParams)
+          ? idFromParams
+          : idFromResult;
 
         let value: string | null = null;
         if (req.body && Object.keys(req.body).length > 0) {
           const raw = JSON.stringify(req.body);
-          value = raw.length > MAX_PAYLOAD ? `${raw.slice(0, MAX_PAYLOAD)}…` : raw;
+          value =
+            raw.length > MAX_PAYLOAD ? `${raw.slice(0, MAX_PAYLOAD)}…` : raw;
         }
 
         this.prisma.systemLog
@@ -57,7 +60,9 @@ export class AuditInterceptor implements NestInterceptor {
               ipAddress: (req.ip ?? '').slice(0, 45) || null,
             },
           })
-          .catch((err: Error) => this.logger.warn(`No se pudo auditar: ${err.message}`));
+          .catch((err: Error) =>
+            this.logger.warn(`No se pudo auditar: ${err.message}`),
+          );
       }),
     );
   }

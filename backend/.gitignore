@@ -60,6 +60,8 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # storage & uploads (no subir binarios ni dumps)
 storage/
+!src/modules/storage/
+!src/modules/storage/**
 uploads/
 !storage/.gitkeep
 *.db

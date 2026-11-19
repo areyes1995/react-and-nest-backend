@@ -42,7 +42,8 @@ export class RegisterAuthDto {
   @IsOptional()
   @IsString()
   @ApiProperty({
-    description: 'Nombre del rol existente en la tabla Role (RBAC). Por defecto: GUEST',
+    description:
+      'Nombre del rol existente en la tabla Role (RBAC). Por defecto: GUEST',
     required: false,
   })
   role?: string;

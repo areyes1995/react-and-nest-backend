@@ -7,7 +7,7 @@ import { aiApi, curriculumApi } from '@services/educraft'
 import type { CurriculumGrade, TutorMessage } from '@services/types'
 import { Drawer, RichMath, Select } from '@components/ui'
 import { Robot } from '@components/brand/Illustrations'
-import { readDocumentText } from '@lib/pdf'
+import { readDocumentText, unsupportedMediaReason } from '@lib/pdf'
 import { cn } from '@lib/cn'
 
 const QUICK = [
@@ -72,6 +72,12 @@ export function AssistantDrawer() {
   }
 
   const convertDocument = async (file: File) => {
+    const reason = unsupportedMediaReason(file)
+    if (reason) {
+      setMessages((m) => [...m, { id: -Date.now() - 1, role: 'assistant', content: reason, createdAt: new Date().toISOString() }])
+      error('Archivo no compatible', reason)
+      return
+    }
     if (!gradeId) return
     setSending(true)
     setMessages((m) => [...m, { id: -Date.now(), role: 'user', content: `Convertir “${file.name}” en una sesión de clase.`, createdAt: new Date().toISOString() }])
@@ -81,7 +87,9 @@ export function AssistantDrawer() {
       assistant.close()
       navigate('/app/planificacion/planes/nuevo', { state: { draft: res.plan } })
     } catch (err) {
-      error('No se pudo convertir el documento', (err as Error).message)
+      const detail = (err as Error).message
+      setMessages((m) => [...m, { id: -Date.now() - 2, role: 'assistant', content: detail, createdAt: new Date().toISOString() }])
+      error('No se pudo convertir el documento', detail)
     } finally {
       setSending(false)
     }
@@ -116,7 +124,7 @@ export function AssistantDrawer() {
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,.txt,.md,application/pdf,text/plain"
+              accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,image/*,audio/*,video/*"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0]
@@ -124,6 +132,10 @@ export function AssistantDrawer() {
                 if (f) void convertDocument(f)
               }}
             />
+            <p className="w-full text-[0.7rem] text-ink-3">
+              Solo PDF, TXT o MD con texto se pueden convertir. Esta versión no analiza imágenes, audio ni video: si subes uno,
+              te avisaré aquí en la conversación y podrás pegar el texto en el chat.
+            </p>
           </div>
           <div className="flex items-end gap-2">
             <textarea

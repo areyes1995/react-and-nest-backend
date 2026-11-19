@@ -22,6 +22,9 @@ export function localParts(instant = new Date()) {
 
 /** "3ro de Secundaria" + "A" → "3° Secundaria A". */
 export function sectionLabel(gradeName: string, sectionName: string): string {
-  const short = gradeName.replace(/^(\d)\s*(?:ro|do|to|er|mo|vo|no)?\s+de\s+/i, '$1° ');
+  const short = gradeName.replace(
+    /^(\d)\s*(?:ro|do|to|er|mo|vo|no)?\s+de\s+/i,
+    '$1° ',
+  );
   return `${short} ${sectionName}`.trim();
 }

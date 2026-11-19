@@ -9,7 +9,8 @@ export class RagChunkContextQueryDto {
   @Type(() => Number)
   @IsOptional()
   @ApiProperty({
-    description: 'Número de chunks previos (por índice) a incluir como contexto.',
+    description:
+      'Número de chunks previos (por índice) a incluir como contexto.',
     default: 3,
     required: false,
   })
@@ -21,7 +22,8 @@ export class RagChunkContextQueryDto {
   @Type(() => Number)
   @IsOptional()
   @ApiProperty({
-    description: 'Número de chunks posteriores (por índice) a incluir como contexto.',
+    description:
+      'Número de chunks posteriores (por índice) a incluir como contexto.',
     default: 3,
     required: false,
   })

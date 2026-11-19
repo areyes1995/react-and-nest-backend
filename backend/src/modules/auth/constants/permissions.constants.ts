@@ -7,10 +7,25 @@ export const RESOURCES = [
   { name: 'auth', description: 'Autenticación y sesiones' },
   { name: 'module', description: 'Visibilidad de módulos del frontend' },
   { name: 'custom-module', description: 'Módulos personalizados del usuario' },
-  { name: 'curriculum', description: 'Adecuación curricular (competencias, indicadores, contenidos)' },
-  { name: 'academic', description: 'Año escolar, secciones, estudiantes, asistencia y calificaciones' },
-  { name: 'planning', description: 'Programaciones, planes de clase, presentaciones y actividades' },
-  { name: 'evaluation', description: 'Banco de preguntas, exámenes, rúbricas y listas de cotejo' },
+  {
+    name: 'curriculum',
+    description:
+      'Adecuación curricular (competencias, indicadores, contenidos)',
+  },
+  {
+    name: 'academic',
+    description:
+      'Año escolar, secciones, estudiantes, asistencia y calificaciones',
+  },
+  {
+    name: 'planning',
+    description:
+      'Programaciones, planes de clase, presentaciones y actividades',
+  },
+  {
+    name: 'evaluation',
+    description: 'Banco de preguntas, exámenes, rúbricas y listas de cotejo',
+  },
   { name: 'library', description: 'Biblioteca de recursos del docente' },
   { name: 'report', description: 'Reportes, boletines e informes para padres' },
   { name: 'ai-pedagogy', description: 'Inteligencia artificial pedagógica' },
@@ -133,7 +148,8 @@ export const PERMISSIONS = [
   {
     name: 'academic:manage',
     resource: 'academic',
-    description: 'Gestionar año escolar, secciones, estudiantes, asistencia y notas',
+    description:
+      'Gestionar año escolar, secciones, estudiantes, asistencia y notas',
   },
   {
     name: 'planning:manage',

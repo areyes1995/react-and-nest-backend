@@ -101,3 +101,44 @@ model AssessmentScore {
   @@unique([assessmentId, studentId])
   @@index([studentId])
 }
+
+/// Historial auditable de cada escritura del registro oficial.
+/// Sin relaciones Prisma: los modelos de plataforma y de sección pertenecen a
+/// otros módulos; `actorId` es SystemUser.id y `sectionId`/`studentId` sus ids.
+model GradeHistory {
+  id            Int       @id @default(autoincrement())
+  sectionId     Int
+  studentId     Int?
+  actorId       Int?
+  /// SAVE | FINAL | RECALCULATE | LOCK | UNLOCK
+  action        String    @db.VarChar(30)
+  /// COMPETENCE_GRADE | FINAL_GRADE | PERIOD_LOCK
+  entity        String    @db.VarChar(40)
+  entityId      Int?
+  period        Int?
+  block         Int?
+  previousValue String?   @db.Text
+  nextValue     String?   @db.Text
+  reason        String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  @@index([sectionId, createdAt])
+  @@index([studentId, createdAt])
+  @@index([entity, entityId])
+}
+
+/// Bloqueo de las calificaciones de un periodo para toda la sección.
+/// La ausencia de fila equivale a periodo abierto.
+model PeriodLock {
+  id        Int      @id @default(autoincrement())
+  sectionId Int
+  period    Int // 1…4
+  isLocked  Boolean  @default(true)
+  lockedBy  Int?
+  reason    String?  @db.VarChar(300)
+  lockedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sectionId, period])
+  @@index([sectionId])
+}

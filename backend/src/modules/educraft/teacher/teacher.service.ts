@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { TeacherScopeService } from '../shared/teacher-scope.service';
 import { CalendarService } from '../calendar/calendar.service';
+import { GoogleCalendarService } from './google-calendar.service';
 import { ReportService } from '../report/report.service';
 import { addDays, formatDateOnly, toDateOnly } from '../shared/dates.util';
 import { GRADING_BLOCKS } from '../shared/grading.calculator';
@@ -21,6 +22,7 @@ export class TeacherService {
     private readonly scope: TeacherScopeService,
     private readonly calendar: CalendarService,
     private readonly reports: ReportService,
+    private readonly google: GoogleCalendarService,
   ) {}
 
   async profile(userId: number) {
@@ -37,8 +39,31 @@ export class TeacherService {
     });
     const profile =
       user.teacherProfile ??
-      (await this.prisma.teacherProfile.create({ data: { userId, displayTitle: 'Prof.' } }));
-    return { ...user, teacherProfile: profile };
+      (await this.prisma.teacherProfile.create({
+        data: { userId, displayTitle: 'Prof.' },
+      }));
+    // Los tokens nunca salen del servidor: solo se expone el estado de la conexión.
+    const {
+      googleAccessToken: _access,
+      googleRefreshToken: _refresh,
+      googleTokenExpiresAt: _expires,
+      ...safe
+    } = profile;
+    const preferences =
+      safe.preferences &&
+      typeof safe.preferences === 'object' &&
+      !Array.isArray(safe.preferences)
+        ? { ...(safe.preferences as Record<string, unknown>) }
+        : {};
+    delete preferences.googleCalendarState;
+    return {
+      ...user,
+      teacherProfile: {
+        ...safe,
+        preferences,
+        googleCalendar: await this.google.statusForUser(userId),
+      },
+    };
   }
 
   async updateProfile(userId: number, dto: UpdateTeacherProfileDto) {
@@ -50,12 +75,23 @@ export class TeacherService {
     };
     await this.prisma.systemUser.update({
       where: { id: userId },
-      data: { firstName: firstName?.trim(), lastName: lastName?.trim(), phoneNumber },
+      data: {
+        firstName: firstName?.trim(),
+        lastName: lastName?.trim(),
+        phoneNumber,
+      },
     });
     await this.prisma.teacherProfile.upsert({
       where: { userId },
-      update: { ...profile, preferences: preferences as Prisma.InputJsonValue | undefined },
-      create: { userId, ...profile, preferences: (preferences ?? {}) as Prisma.InputJsonValue },
+      update: {
+        ...profile,
+        preferences: preferences as Prisma.InputJsonValue | undefined,
+      },
+      create: {
+        userId,
+        ...profile,
+        preferences: (preferences ?? {}) as Prisma.InputJsonValue,
+      },
     });
     return this.profile(userId);
   }
@@ -69,7 +105,11 @@ export class TeacherService {
       this.calendar.agenda(userId, now.date, now.date),
       year
         ? this.prisma.section.findMany({
-            where: { teacherId: userId, schoolYearId: year.id, deletedAt: null },
+            where: {
+              teacherId: userId,
+              schoolYearId: year.id,
+              deletedAt: null,
+            },
             include: { grade: true },
             orderBy: [{ grade: { order: 'asc' } }, { name: 'asc' }],
           })
@@ -112,12 +152,16 @@ export class TeacherService {
 
     // Resumen de la clase (todas las secciones del año activo).
     const performances = await Promise.all(
-      sections.map((s) => this.reports.sectionPerformance(userId, s.id, period)),
+      sections.map((s) =>
+        this.reports.sectionPerformance(userId, s.id, period),
+      ),
     );
     const allRows = performances.flatMap((p) => p.rows);
     const avg = (values: Array<number | null | undefined>) => {
       const list = values.filter((v): v is number => typeof v === 'number');
-      return list.length ? Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10 : null;
+      return list.length
+        ? Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10
+        : null;
     };
     const competences = GRADING_BLOCKS.map(({ block, code, name }) => ({
       block,
@@ -128,7 +172,12 @@ export class TeacherService {
 
     const monthStart = `${now.date.slice(0, 8)}01`;
     const upcoming = (
-      await this.calendar.agenda(userId, now.date, formatDateOnly(addDays(toDateOnly(now.date), 14)), false)
+      await this.calendar.agenda(
+        userId,
+        now.date,
+        formatDateOnly(addDays(toDateOnly(now.date), 14)),
+        false,
+      )
     ).slice(0, 8);
 
     const alerts = await this.reports.alerts(userId);
@@ -154,17 +203,26 @@ export class TeacherService {
         })),
         currentPeriod:
           year.periods.find(
-            (p) => formatDateOnly(p.startDate) <= now.date && formatDateOnly(p.endDate) >= now.date,
+            (p) =>
+              formatDateOnly(p.startDate) <= now.date &&
+              formatDateOnly(p.endDate) >= now.date,
           )?.number ?? null,
       },
-      sections: sections.map((s) => ({ id: s.id, name: s.name, grade: s.grade.name, color: s.color })),
+      sections: sections.map((s) => ({
+        id: s.id,
+        name: s.name,
+        grade: s.grade.name,
+        color: s.color,
+      })),
       todayClasses,
       summary: {
         period: period ?? null,
         students: allRows.length,
         average: avg(allRows.map((r) => r.score)),
         attendanceRate: avg(performances.map((p) => p.summary.attendanceRate)),
-        atRisk: allRows.filter((r) => r.level === 'INICIO' || r.level === 'EN_PROCESO').length,
+        atRisk: allRows.filter(
+          (r) => r.level === 'INICIO' || r.level === 'EN_PROCESO',
+        ).length,
         competences,
       },
       upcoming,
@@ -175,54 +233,63 @@ export class TeacherService {
   /** Búsqueda global ("Buscar en Educraft XYZ…"). */
   async search(userId: number, q: string, scope?: string) {
     const term = q.trim();
-    if (term.length < 2) return { students: [], lessonPlans: [], resources: [], evaluations: [] };
+    if (term.length < 2)
+      return { students: [], lessonPlans: [], resources: [], evaluations: [] };
     const contains = { contains: term, mode: 'insensitive' as const };
     const want = (s: string) => !scope || scope === 'all' || scope === s;
-    const [students, lessonPlans, resources, instruments, exams] = await Promise.all([
-      want('students')
-        ? this.prisma.student.findMany({
-            where: {
-              deletedAt: null,
-              section: { teacherId: userId, deletedAt: null },
-              OR: [{ firstName: contains }, { lastName: contains }],
-            },
-            include: { section: { include: { grade: true } } },
-            take: 6,
-          })
-        : [],
-      want('resources')
-        ? this.prisma.lessonPlan.findMany({
-            where: { teacherId: userId, deletedAt: null, OR: [{ title: contains }, { topic: contains }] },
-            select: { id: true, title: true, topic: true, date: true },
-            take: 6,
-          })
-        : [],
-      want('resources')
-        ? this.prisma.libraryResource.findMany({
-            where: {
-              teacherId: userId,
-              deletedAt: null,
-              OR: [{ title: contains }, { tags: { has: term.toLowerCase() } }],
-            },
-            select: { id: true, title: true, category: true },
-            take: 6,
-          })
-        : [],
-      want('evaluations')
-        ? this.prisma.evaluationInstrument.findMany({
-            where: { teacherId: userId, deletedAt: null, title: contains },
-            select: { id: true, title: true, type: true },
-            take: 6,
-          })
-        : [],
-      want('evaluations')
-        ? this.prisma.exam.findMany({
-            where: { teacherId: userId, deletedAt: null, title: contains },
-            select: { id: true, title: true },
-            take: 6,
-          })
-        : [],
-    ]);
+    const [students, lessonPlans, resources, instruments, exams] =
+      await Promise.all([
+        want('students')
+          ? this.prisma.student.findMany({
+              where: {
+                deletedAt: null,
+                section: { teacherId: userId, deletedAt: null },
+                OR: [{ firstName: contains }, { lastName: contains }],
+              },
+              include: { section: { include: { grade: true } } },
+              take: 6,
+            })
+          : [],
+        want('resources')
+          ? this.prisma.lessonPlan.findMany({
+              where: {
+                teacherId: userId,
+                deletedAt: null,
+                OR: [{ title: contains }, { topic: contains }],
+              },
+              select: { id: true, title: true, topic: true, date: true },
+              take: 6,
+            })
+          : [],
+        want('resources')
+          ? this.prisma.libraryResource.findMany({
+              where: {
+                teacherId: userId,
+                deletedAt: null,
+                OR: [
+                  { title: contains },
+                  { tags: { has: term.toLowerCase() } },
+                ],
+              },
+              select: { id: true, title: true, category: true },
+              take: 6,
+            })
+          : [],
+        want('evaluations')
+          ? this.prisma.evaluationInstrument.findMany({
+              where: { teacherId: userId, deletedAt: null, title: contains },
+              select: { id: true, title: true, type: true },
+              take: 6,
+            })
+          : [],
+        want('evaluations')
+          ? this.prisma.exam.findMany({
+              where: { teacherId: userId, deletedAt: null, title: contains },
+              select: { id: true, title: true },
+              take: 6,
+            })
+          : [],
+      ]);
     return {
       students: students.map((s) => ({
         id: s.id,

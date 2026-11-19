@@ -22,6 +22,9 @@ model LearningUnit {
   specificCompetenceIds Int[]
   indicatorIds          Int[]
   contentIds            Int[]
+  axisIds               Int[]
+  capacityIds           Int[]
+  performanceIds        Int[]
   /// Criterios de evaluación y evidencias esperadas.
   evaluationCriteria    String[]
   evidences             String[]
@@ -62,6 +65,9 @@ model LessonPlan {
   specificCompetenceIds Int[]
   indicatorIds          Int[]
   contentIds            Int[]
+  axisIds               Int[]
+  capacityIds           Int[]
+  performanceIds        Int[]
 
   moments    Json
   /// Evaluación de la sesión: { type, instruments[], evidences[] }.

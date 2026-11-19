@@ -18,6 +18,14 @@ model CalendarEvent {
   allDay       Boolean           @default(false)
   color        String?           @db.VarChar(9)
 
+  /// Recurrencia (DAILY | WEEKLY | MONTHLY | YEARLY). null = evento único.
+  recurrenceFreq      String?   @db.VarChar(10)
+  recurrenceInterval  Int?
+  recurrenceUntil     DateTime? @db.Date
+  recurrenceCount     Int?
+  /// Días ISO (1=lunes…7=domingo) dentro de la semana para recurrencias WEEKLY.
+  recurrenceByWeekday String?   @db.VarChar(20)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

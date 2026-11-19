@@ -40,7 +40,8 @@ export class RagSearchQueryDto {
   @Max(1)
   @IsOptional()
   @ApiProperty({
-    description: 'Score mínimo (similitud coseno, 1 - distancia) para incluir un chunk.',
+    description:
+      'Score mínimo (similitud coseno, 1 - distancia) para incluir un chunk.',
     default: 0,
     required: false,
   })
@@ -65,7 +66,8 @@ export class RagSearchQueryDto {
   @IsString()
   @IsOptional()
   @ApiProperty({
-    description: 'Filtro opcional por nivel de sensibilidad (internal, confidential, etc.).',
+    description:
+      'Filtro opcional por nivel de sensibilidad (internal, confidential, etc.).',
     required: false,
   })
   sensitivity?: string;

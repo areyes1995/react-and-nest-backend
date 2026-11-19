@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -39,14 +39,22 @@ export class GradeEntryDto {
   @IsNumber()
   @Min(0)
   @Max(100)
-  @ApiProperty({ required: false, nullable: true })
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Nota en la escala declarada; se normaliza a 0-100.',
+  })
   score?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
-  @ApiProperty({ required: false, nullable: true })
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Recuperación en la escala declarada.',
+  })
   recovery?: number | null;
 }
 
@@ -195,7 +203,10 @@ export class ScoreEntryDto {
 
   @IsOptional()
   @IsObject()
-  @ApiProperty({ required: false, description: 'Respuestas del instrumento de evaluación' })
+  @ApiProperty({
+    required: false,
+    description: 'Respuestas del instrumento de evaluación',
+  })
   instrumentData?: Record<string, unknown>;
 }
 
@@ -206,4 +217,63 @@ export class SaveScoresDto {
   @Type(() => ScoreEntryDto)
   @ApiProperty({ type: [ScoreEntryDto] })
   entries!: ScoreEntryDto[];
+}
+
+export class RecalculateGradesDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  @Type(() => Number)
+  @ApiProperty({ required: false, description: 'Sólo este periodo (P1…P4)' })
+  period?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  @Type(() => Number)
+  @ApiProperty({
+    required: false,
+    description: 'Sólo este bloque de competencias (PC1…PC4)',
+  })
+  block?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
+  @ApiProperty({ required: false, default: false })
+  overwriteManual?: boolean;
+}
+
+export class GradeHistoryQueryDto {
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  @ApiProperty({ required: false })
+  studentId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  @Type(() => Number)
+  @ApiProperty({ required: false })
+  period?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  @Type(() => Number)
+  @ApiProperty({ required: false, default: 30 })
+  limit?: number;
+}
+
+export class SetPeriodLockDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  @ApiProperty({ required: false })
+  reason?: string;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Coffee, Lightbulb, Ticket } from 'lucide-react'
 import { aiApi } from '@services/educraft'
 import { useFeedback } from '@context/ToastContext'
@@ -8,9 +8,9 @@ type Command = 'PROBLEM_OF_DAY' | 'ACTIVE_BREAK' | 'EXIT_TICKET'
 export type QuickResult = Awaited<ReturnType<typeof aiApi.quick>>
 
 const COMMANDS: Array<{ key: Command; label: string; icon: React.ReactNode }> = [
-  { key: 'PROBLEM_OF_DAY', label: 'Redactar problema del día', icon: <Lightbulb className="h-4 w-4 text-amber-500" /> },
-  { key: 'ACTIVE_BREAK', label: 'Sugerir pausa activa', icon: <Coffee className="h-4 w-4 text-emerald-500" /> },
-  { key: 'EXIT_TICKET', label: 'Crear ejercicio de salida (Exit Ticket)', icon: <Ticket className="h-4 w-4 text-pink-500" /> },
+  { key: 'PROBLEM_OF_DAY', label: 'Redactar problema del día', icon: <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-300" /> },
+  { key: 'ACTIVE_BREAK', label: 'Sugerir pausa activa', icon: <Coffee className="h-4 w-4 text-emerald-600 dark:text-emerald-300" /> },
+  { key: 'EXIT_TICKET', label: 'Crear ejercicio de salida (Exit Ticket)', icon: <Ticket className="h-4 w-4 text-pink-600 dark:text-pink-300" /> },
 ]
 
 /** Menú contextual del robot: comandos rápidos de un solo clic. */
@@ -18,6 +18,7 @@ export function QuickAiMenu({ onResult, onClose }: { onResult: (r: QuickResult) 
   const { error } = useFeedback()
   const [topic, setTopic] = useState('')
   const [loading, setLoading] = useState<Command | null>(null)
+  const topicId = useId()
 
   const run = async (command: Command) => {
     setLoading(command)
@@ -34,10 +35,19 @@ export function QuickAiMenu({ onResult, onClose }: { onResult: (r: QuickResult) 
 
   return (
     <div className="p-3">
-      <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Tema (opcional): fracciones…" className="input mb-2 h-9 text-xs" />
+      <label htmlFor={topicId} className="label">
+        Tema (opcional)
+      </label>
+      <input id={topicId} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Fracciones, ecuaciones…" className="input mb-2 text-xs" />
       <div className="space-y-0.5">
         {COMMANDS.map((c) => (
-          <button key={c.key} disabled={!!loading} onClick={() => run(c.key)} className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-ink-2 hover:bg-surface-3 hover:text-ink disabled:opacity-50">
+          <button
+            key={c.key}
+            type="button"
+            disabled={!!loading}
+            onClick={() => run(c.key)}
+            className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-ink-2 hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+          >
             {c.icon} {loading === c.key ? 'Generando…' : c.label}
           </button>
         ))}

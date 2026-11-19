@@ -1,4 +1,10 @@
-import { Prisma, Role, RolePermission, SystemUser, SystemUserRole } from '@prisma/client';
+import {
+  Prisma,
+  Role,
+  RolePermission,
+  SystemUser,
+  SystemUserRole,
+} from '@prisma/client';
 import { PagedResultDto } from 'src/shared/dtos/paged-result.dto';
 import { UserQueryParameters } from '../../dto/system-user-query-parameters.dto';
 import { PrismaTx } from 'prisma/prisma.types';

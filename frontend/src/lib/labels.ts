@@ -1,6 +1,13 @@
 // Etiquetas en español y tonos de los enums del dominio.
 
 import type { Tone } from '@components/ui/Badge'
+import {
+  ACHIEVEMENT_THRESHOLDS,
+  LITERAL_GRADES,
+  scaleValueFromInternal,
+  scaleValueToInternal,
+  type GradingScaleType,
+} from '../../../backend/src/modules/educraft/shared/grading.calculator'
 import type {
   AchievementLevel,
   ActivityType,
@@ -136,11 +143,45 @@ export const BLOCK_SHORT: Record<number, string> = {
 
 export const BLOCK_TONES: Record<number, Tone> = { 1: 'pink', 2: 'purple', 3: 'orange', 4: 'blue' }
 
+export { scaleValueFromInternal, scaleValueToInternal, ACHIEVEMENT_THRESHOLDS }
+export type { GradingScaleType }
+
+export const SCALE_LABELS: Record<GradingScaleType, string> = {
+  NUMERIC_100: '0–100',
+  NUMERIC_1_5: '1–5',
+  NUMERIC_1_4: '1–4',
+  LITERAL: 'A/B/C/D',
+}
+
+const LITERAL_LABELS: Record<number, string> = Object.fromEntries(
+  LITERAL_GRADES.map((g) => [g.code, g.label]),
+)
+
+/** Valor interno 0-100 → texto de la escala declarada (letra para LITERAL). */
+export function scaleText(value: number | null | undefined, type: GradingScaleType): string {
+  const display = scaleValueFromInternal(value, type)
+  if (display == null) return ''
+  return type === 'LITERAL' ? LITERAL_LABELS[display] ?? '' : String(display)
+}
+
+/** Texto escrito por el docente → valor interno 0-100. */
+export function parseScaleInput(text: string, type: GradingScaleType): number | null {
+  const clean = text.trim()
+  if (!clean) return null
+  if (type === 'LITERAL') {
+    const byLabel = LITERAL_GRADES.find((g) => g.label === clean.toUpperCase())
+    const code = byLabel?.code ?? Number(clean)
+    return scaleValueToInternal(code, type)
+  }
+  const n = Number(clean.replace(',', '.'))
+  return Number.isFinite(n) ? scaleValueToInternal(n, type) : null
+}
+
 export function levelFor(score: number | null | undefined, passing = 70): AchievementLevel | null {
   if (score == null) return null
-  if (score >= 90) return 'EXCELENTE'
+  if (score >= ACHIEVEMENT_THRESHOLDS.EXCELENTE) return 'EXCELENTE'
   if (score >= passing) return 'LOGRADO'
-  if (score >= passing - 10) return 'EN_PROCESO'
+  if (score >= passing - ACHIEVEMENT_THRESHOLDS.EN_PROCESO_MARGIN) return 'EN_PROCESO'
   return 'INICIO'
 }
 

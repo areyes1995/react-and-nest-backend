@@ -32,6 +32,157 @@ export const FUNDAMENTAL_COMPETENCES: FundamentalSeed[] = [
   { code: 'DESARROLLO_PERSONAL', name: 'Desarrollo Personal y Espiritual', shortName: 'Desarrollo personal', gradingBlock: 3, order: 7 },
 ];
 
+export type AxisCode =
+  | 'SALUD_BIENESTAR'
+  | 'DESARROLLO_SOSTENIBLE'
+  | 'DESARROLLO_PERSONAL_PROFESIONAL'
+  | 'ALFABETIZACION_IMPRESCINDIBLE'
+  | 'CIUDADANIA_CONVIVENCIA';
+
+export interface CrossCuttingAxisSeed {
+  code: AxisCode;
+  name: string;
+  cycle: number;
+  description: string;
+  /** Enunciados por grado, en el orden del ciclo (págs. 144 y 155 del documento). */
+  gradeDetails: string[];
+  order: number;
+}
+
+/** Ejes transversales de la Adecuación, con la redacción de cada ciclo. */
+export const CROSS_CUTTING_AXES: CrossCuttingAxisSeed[] = [
+  {
+    code: 'SALUD_BIENESTAR',
+    name: 'Salud y Bienestar',
+    cycle: 1,
+    description:
+      'Análisis de situaciones de salud de la comunidad mediante estadística descriptiva, números reales y modelos de expresiones y funciones algebraicas.',
+    gradeDetails: [
+      '1ro: Análisis estadísticos con datos no agrupados de situaciones relacionadas con enfermedades de la comunidad.',
+      '2do: Análisis e interpretación del comportamiento de enfermedades y números de contagios a partir del conocimiento de los números reales.',
+      '3ro: Modelos de expresiones y funciones algebraicas para interpretar fenómenos y comportamientos en situaciones de salud.',
+    ],
+    order: 1,
+  },
+  {
+    code: 'DESARROLLO_SOSTENIBLE',
+    name: 'Desarrollo Sostenible',
+    cycle: 1,
+    description:
+      'Uso racional del agua y de los recursos naturales, proyectos ambientales y predicción de situaciones climatológicas a partir de modelos numéricos y algebraicos.',
+    gradeDetails: [
+      '1ro: Empleo de los números racionales en la interpretación del uso racional del agua como recurso esencial para vivir.',
+      '2do: Empleo de los conocimientos acerca de los números reales para la interpretación de proyectos naturales en favor del medio ambiente y desarrollo sostenible.',
+      '3ro: Acción por el clima. Predicción a partir de modelos algebraicos en situaciones climatológicas.',
+    ],
+    order: 2,
+  },
+  {
+    code: 'DESARROLLO_PERSONAL_PROFESIONAL',
+    name: 'Desarrollo Personal y Profesional',
+    cycle: 1,
+    description:
+      'Aporte histórico de los sistemas numéricos y de matemáticos destacados, con aplicación del álgebra al análisis de situaciones financieras de oferta y demanda.',
+    gradeDetails: [
+      '1ro: Aporte histórico de los sistemas numéricos y los beneficios generados a la humanidad a partir de sus descubrimientos.',
+      '2do: Aporte histórico de matemáticos destacados en la aplicación de los números reales y su impacto en el desarrollo profesional.',
+      '3ro: Desarrollo y aporte del álgebra para analizar situaciones de oferta y demandas en situaciones financieras de carácter social.',
+    ],
+    order: 3,
+  },
+  {
+    code: 'ALFABETIZACION_IMPRESCINDIBLE',
+    name: 'Alfabetización Imprescindible',
+    cycle: 1,
+    description:
+      'Alfabetización en los sistemas de numeración, la programación y el sistema de los números reales, con nociones de programación desde el análisis de funciones algebraicas.',
+    gradeDetails: [
+      '1ro: Alfabetización en la interpretación de principios y leyes de los sistemas de numeración y su impacto en la humanidad.',
+      '2do: Alfabetización en la programación y el sistema de los números reales.',
+      '3ro: Nociones sobre procesos de programación a partir del análisis de funciones algebraicas.',
+    ],
+    order: 4,
+  },
+  {
+    code: 'CIUDADANIA_CONVIVENCIA',
+    name: 'Ciudadanía y Convivencia',
+    cycle: 1,
+    description:
+      'Interpretación de problemáticas comunitarias —desechos sólidos, proyectos viales y contagios— desde el análisis estadístico, la distancia y los modelos algebraicos.',
+    gradeDetails: [
+      '1ro: Interpretación y repercusión de desechos sólidos en la comunidad a partir del análisis estadístico.',
+      '2do: Análisis de proyectos viales y carreteras a partir del concepto de distancia y su aplicación en los números reales.',
+      '3ro: Análisis del crecimiento en el número de contagios de enfermedades infecciosas en la comunidad a partir del modelo generado por funciones algebraicas.',
+    ],
+    order: 5,
+  },
+  {
+    code: 'SALUD_BIENESTAR',
+    name: 'Salud y Bienestar',
+    cycle: 2,
+    description:
+      'Análisis de enfermedades y de la forma geométrica de los virus, modelado sinusoidal de las palpitaciones cardíacas, instrumentación médica y estudio de puntos críticos en curvas de crecimiento.',
+    gradeDetails: [
+      '4to: Análisis estadísticos de situaciones relacionadas con enfermedades y análisis de la forma geométrica de los virus.',
+      '5to: Modelado del comportamiento sinusoidal de las palpitaciones del corazón a partir del análisis de funciones trigonométricas. Instrumentación en Medicina para análisis.',
+      '6to: Análisis de los puntos críticos y concavidad de una curva a partir del modelo de crecimiento en casos de propagación de virus y enfermedades.',
+    ],
+    order: 1,
+  },
+  {
+    code: 'DESARROLLO_SOSTENIBLE',
+    name: 'Desarrollo Sostenible',
+    cycle: 2,
+    description:
+      'Agua limpia y saneamiento, acción por el clima y predicción del impacto de fenómenos naturales mediante modelos geométricos, trigonométricos y probabilísticos.',
+    gradeDetails: [
+      '4to: Agua limpia y saneamiento. Estudio de formas geométricas en envases y recipientes que permitan optimizar el consumo y la preservación del agua como recurso esencial para vivir.',
+      '5to: Salud y bienestar. Comportamiento gráfico de las palpitaciones del corazón a partir de funciones trigonométricas que permitan modelar su frecuencia cardíaca.',
+      '6to: Acción por el clima. Predicción a partir de la programación y modelos probabilísticos del impacto de fenómenos naturales y su repercusión en las finanzas del país.',
+    ],
+    order: 2,
+  },
+  {
+    code: 'DESARROLLO_PERSONAL_PROFESIONAL',
+    name: 'Desarrollo Personal y Profesional',
+    cycle: 2,
+    description:
+      'Aporte histórico de hombres y mujeres a la geometría y la trigonometría, y desarrollo y aporte de matemáticos al cálculo diferencial e integral.',
+    gradeDetails: [
+      '4to: Aporte histórico de hombres y mujeres a la geometría. Trabajos y hallazgos en el ámbito de la geometría.',
+      '5to: Aporte histórico de hombres y mujeres a la trigonometría. Trabajos y hallazgos en el ámbito de la trigonometría.',
+      '6to: Desarrollo y aporte de matemáticos al cálculo diferencial e integral.',
+    ],
+    order: 3,
+  },
+  {
+    code: 'ALFABETIZACION_IMPRESCINDIBLE',
+    name: 'Alfabetización Imprescindible',
+    cycle: 2,
+    description:
+      'Alfabetización en educación económica y financiera, nociones de programación y herramientas tecnológicas para el modelado trigonométrico y el análisis numérico del cálculo diferencial.',
+    gradeDetails: [
+      '4to: Alfabetización en educación económica y financiera para el análisis de situaciones de carácter social.',
+      '5to: Nociones de programación y otras herramientas tecnológicas para el modelado de situaciones trigonométricas y predicciones a problemáticas sociales y del medio ambiente.',
+      '6to: Nociones en procesos de programación a partir del análisis numérico y el cálculo diferencial.',
+    ],
+    order: 4,
+  },
+  {
+    code: 'CIUDADANIA_CONVIVENCIA',
+    name: 'Ciudadanía y Convivencia',
+    cycle: 2,
+    description:
+      'Reestructuración vial, análisis de alturas y distancias arquitectónicas y estudio del crecimiento poblacional con modelos geométricos, trigonométricos y del cálculo.',
+    gradeDetails: [
+      '4to: Reestructuración de calles y avenidas para dar respuesta a problemas viales y de transporte usando conceptos y formas geométricas.',
+      '5to: Análisis de alturas y distancias en edificios y construcciones arquitectónicas a partir de modelos y funciones trigonométricas.',
+      '6to: Análisis del crecimiento poblacional a partir del modelo generado del cálculo diferencial e integral.',
+    ],
+    order: 5,
+  },
+];
+
 export interface GradeSeed {
   code: string;
   name: string;
@@ -655,6 +806,69 @@ export const GRADES: GradeSeed[] = [
     ],
   },
 ];
+
+/**
+ * Competencia fundamental a la que tributa cada indicador de logro, en el
+ * mismo orden del arreglo `indicators` de cada grado. Se declara
+ * explícitamente para no depender de un heurístico por palabras clave: el
+ * documento agrupa los indicadores por competencia en ese orden.
+ */
+export const INDICATOR_FUNDAMENTALS: Record<string, FundamentalCode[]> = {
+  'SEC-1': [
+    'COMUNICATIVA', 'COMUNICATIVA', 'COMUNICATIVA',
+    'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO',
+    'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS',
+    'ETICA_CIUDADANA', 'ETICA_CIUDADANA', 'ETICA_CIUDADANA',
+    'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA',
+    'AMBIENTAL_SALUD', 'AMBIENTAL_SALUD',
+    'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL',
+  ],
+  'SEC-2': [
+    'COMUNICATIVA', 'COMUNICATIVA', 'COMUNICATIVA',
+    'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO',
+    'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS',
+    'ETICA_CIUDADANA', 'ETICA_CIUDADANA',
+    'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA',
+    'AMBIENTAL_SALUD', 'AMBIENTAL_SALUD',
+    'DESARROLLO_PERSONAL',
+  ],
+  'SEC-3': [
+    'COMUNICATIVA', 'COMUNICATIVA', 'COMUNICATIVA',
+    'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO',
+    'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS',
+    'ETICA_CIUDADANA', 'ETICA_CIUDADANA', 'ETICA_CIUDADANA',
+    'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA',
+    'AMBIENTAL_SALUD', 'AMBIENTAL_SALUD',
+    'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL',
+  ],
+  'SEC-4': [
+    'COMUNICATIVA', 'COMUNICATIVA', 'COMUNICATIVA',
+    'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO',
+    'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS',
+    'ETICA_CIUDADANA',
+    'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA',
+    'AMBIENTAL_SALUD',
+    'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL',
+  ],
+  'SEC-5': [
+    'COMUNICATIVA', 'COMUNICATIVA', 'COMUNICATIVA',
+    'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO',
+    'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS',
+    'ETICA_CIUDADANA',
+    'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA',
+    'AMBIENTAL_SALUD',
+    'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL',
+  ],
+  'SEC-6': [
+    'COMUNICATIVA', 'COMUNICATIVA', 'COMUNICATIVA',
+    'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO', 'PENSAMIENTO_LOGICO',
+    'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS', 'RESOLUCION_PROBLEMAS',
+    'ETICA_CIUDADANA',
+    'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA', 'CIENTIFICA_TECNOLOGICA',
+    'AMBIENTAL_SALUD',
+    'DESARROLLO_PERSONAL', 'DESARROLLO_PERSONAL',
+  ],
+};
 
 /** Días feriados nacionales de República Dominicana (mes-día). */
 export const DR_HOLIDAYS: Array<{ monthDay: string; name: string }> = [

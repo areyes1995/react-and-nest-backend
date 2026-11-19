@@ -7,7 +7,19 @@ import { RagChunkContextQueryDto } from '../../dtos/rag-chunk-context-query.dto'
 import { RagChunkContextResultDto } from '../../dtos/rag-chunk-context-result.dto';
 import { RagIndexStatusDto } from '../../dtos/rag-index-status.dto';
 
+export interface RagIngestInput {
+  text: string;
+  title?: string;
+  originalFilename: string;
+  mimeType?: string;
+  fileSizeBytes?: number;
+  department?: string;
+  project?: string;
+  sensitivity?: string;
+}
+
 export interface RagService {
+  ingest(input: RagIngestInput): Promise<RagDocumentDto>;
   searchVector(query: RagSearchQueryDto): Promise<RagSearchResultDto>;
   searchText(query: RagTextSearchQueryDto): Promise<RagTextSearchResultDto>;
   getIndexStatus(): Promise<RagIndexStatusDto>;

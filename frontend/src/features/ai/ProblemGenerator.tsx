@@ -1,36 +1,60 @@
 import { useState } from 'react'
-import { ChevronDown, Copy, Save, Sparkles } from 'lucide-react'
+import { AlertCircle, ChevronDown, Copy, Save, Sparkles } from 'lucide-react'
 import { aiApi, evaluationApi } from '@services/educraft'
 import type { Difficulty, GeneratedProblem } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
-import { useFundamentals, useGrades } from '@hooks/useCatalog'
+import { useFundamentals, useGradeCurriculum, useGrades } from '@hooks/useCatalog'
 import { Badge, Button, Field, Input, RichMath, Select, Latex } from '@components/ui'
 import { SourceBadge } from '@/features/common/SourceBadge'
 import { DIFFICULTY } from '@lib/labels'
 import { cn } from '@lib/cn'
+
+type ProblemAlignment = {
+  gradeId: number | null
+  gradeName: string
+  gradeOrder: number | null
+  fundamentalId: number | null
+  competenceName: string | null
+  indicators: string[]
+}
+
+type ProblemsResponse = Omit<Awaited<ReturnType<typeof aiApi.problems>>, 'problems'> & {
+  unsupported?: boolean
+  error?: string
+  supportedFamilies?: string[]
+  family?: string
+  alignment?: ProblemAlignment
+  problems: Array<GeneratedProblem & { alignment?: ProblemAlignment }>
+}
 
 /** 4.1 Generador de problemas contextualizados. */
 export function ProblemGenerator({ initialTopic = '' }: { initialTopic?: string }) {
   const grades = useGrades()
   const fundamentals = useFundamentals()
   const { success, error } = useFeedback()
-  const [form, setForm] = useState({ topic: initialTopic, gradeId: '', fundamentalId: '', context: '', difficulty: 'MEDIUM' as Difficulty, count: 3 })
-  const [result, setResult] = useState<Awaited<ReturnType<typeof aiApi.problems>> | null>(null)
+  const [form, setForm] = useState({ topic: initialTopic, gradeId: '', fundamentalId: '', indicatorId: '', context: '', difficulty: 'MEDIUM' as Difficulty, count: 3 })
+  const [result, setResult] = useState<ProblemsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState<number | null>(0)
+  const curriculum = useGradeCurriculum(form.gradeId ? Number(form.gradeId) : null)
+  const indicators = (curriculum?.indicators ?? []).filter(
+    (i) => !form.fundamentalId || i.fundamentalId === Number(form.fundamentalId),
+  )
 
   const generate = async () => {
     if (!form.topic.trim()) return
     setLoading(true)
     try {
-      const res = await aiApi.problems({
+      const body = {
         topic: form.topic,
         gradeId: form.gradeId ? Number(form.gradeId) : undefined,
         fundamentalId: form.fundamentalId ? Number(form.fundamentalId) : undefined,
+        indicatorIds: form.indicatorId ? [Number(form.indicatorId)] : undefined,
         context: form.context || undefined,
         difficulty: form.difficulty,
         count: form.count,
-      })
+      }
+      const res = (await aiApi.problems(body)) as ProblemsResponse
       setResult(res)
       setOpen(0)
     } catch (err) {
@@ -70,7 +94,16 @@ export function ProblemGenerator({ initialTopic = '' }: { initialTopic?: string 
           <Select value={form.gradeId} onChange={(e) => setForm({ ...form, gradeId: e.target.value })} placeholder="Cualquiera" options={grades.map((g) => ({ value: g.id, label: g.name }))} />
         </Field>
         <Field label="Competencia">
-          <Select value={form.fundamentalId} onChange={(e) => setForm({ ...form, fundamentalId: e.target.value })} placeholder="Cualquiera" options={fundamentals.map((f) => ({ value: f.id, label: f.name }))} />
+          <Select value={form.fundamentalId} onChange={(e) => setForm({ ...form, fundamentalId: e.target.value, indicatorId: '' })} placeholder="Cualquiera" options={fundamentals.map((f) => ({ value: f.id, label: f.name }))} />
+        </Field>
+        <Field label="Indicador de logro" hint={form.gradeId ? undefined : 'Selecciona un grado primero'}>
+          <Select
+            value={form.indicatorId}
+            onChange={(e) => setForm({ ...form, indicatorId: e.target.value })}
+            placeholder="Todos los del grado"
+            disabled={!form.gradeId}
+            options={indicators.map((i) => ({ value: i.id, label: i.description.length > 80 ? `${i.description.slice(0, 77)}…` : i.description }))}
+          />
         </Field>
         <Field label="Contexto" hint="Salud, finanzas, medio ambiente, deportes…">
           <Input value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} placeholder="Vida cotidiana" />
@@ -94,13 +127,32 @@ export function ProblemGenerator({ initialTopic = '' }: { initialTopic?: string 
             Indica el tema, la competencia, el nivel, el contexto y la dificultad. Recibirás problemas con solución, procedimiento, respuesta y variantes fácil y difícil.
           </div>
         )}
-        {result && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-bold">{result.problems.length} problema(s) sobre “{result.topic}”</p>
-            <SourceBadge source={result.source} />
+        {result?.unsupported && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+            <p className="flex items-center gap-2 font-bold">
+              <AlertCircle className="h-4 w-4 shrink-0" /> Tema no admitido por el generador
+            </p>
+            <p className="mt-2">{result.error}</p>
+            <p className="mt-2 text-xs">Familias compatibles: {result.supportedFamilies?.join(' · ')}</p>
           </div>
         )}
-        {result?.problems.map((p, i) => (
+        {result && !result.unsupported && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">{result.problems.length} problema(s) sobre “{result.topic}”</p>
+              <SourceBadge source={result.source} />
+            </div>
+            {result.alignment && (
+              <div className="rounded-xl border border-line bg-surface-2 p-3 text-xs text-ink-3">
+                <p className="font-bold text-ink-2">Alineación utilizada</p>
+                <p>Grado: {result.alignment.gradeName}{result.family ? ` · Familia: ${result.family}` : ''}</p>
+                {result.alignment.competenceName && <p>Competencia: {result.alignment.competenceName}</p>}
+                {result.alignment.indicators.length > 0 && <p>Indicadores: {result.alignment.indicators.join('; ')}</p>}
+              </div>
+            )}
+          </>
+        )}
+        {!result?.unsupported && result?.problems.map((p, i) => (
           <div key={i} className="rounded-2xl border border-line bg-surface-2">
             <button onClick={() => setOpen(open === i ? null : i)} className="flex w-full items-start gap-3 p-4 text-left">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-gradient text-xs font-bold text-white">{i + 1}</span>
@@ -126,6 +178,13 @@ export function ProblemGenerator({ initialTopic = '' }: { initialTopic?: string 
                     ))}
                   </ol>
                 </div>
+                {p.alignment && (
+                  <p className="text-xs text-ink-3">
+                    Alineado a {p.alignment.gradeName}
+                    {p.alignment.competenceName ? ` · ${p.alignment.competenceName}` : ''}
+                    {p.alignment.indicators.length ? ` · ${p.alignment.indicators[0]}` : ''}
+                  </p>
+                )}
                 <p className="rounded-xl bg-soft-green px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-300">Respuesta: {p.answer}</p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-xl border border-line p-3">

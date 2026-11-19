@@ -34,7 +34,10 @@ export class PlanningService {
 
   // ── Programaciones / unidades ─────────────────────
 
-  listUnits(teacherId: number, filter: { gradeId?: number; schoolYearId?: number }) {
+  listUnits(
+    teacherId: number,
+    filter: { gradeId?: number; schoolYearId?: number },
+  ) {
     return this.prisma.learningUnit.findMany({
       where: {
         teacherId,
@@ -60,7 +63,13 @@ export class PlanningService {
         lessonPlans: {
           where: { deletedAt: null },
           orderBy: [{ date: 'asc' }, { id: 'asc' }],
-          select: { id: true, title: true, topic: true, date: true, status: true },
+          select: {
+            id: true,
+            title: true,
+            topic: true,
+            date: true,
+            status: true,
+          },
         },
       },
     });
@@ -70,18 +79,29 @@ export class PlanningService {
 
   async createUnit(teacherId: number, dto: CreateUnitDto) {
     if (dto.sectionId) await this.scope.section(teacherId, dto.sectionId);
-    return this.prisma.learningUnit.create({ data: this.unitData(teacherId, dto) as Prisma.LearningUnitUncheckedCreateInput });
+    return this.prisma.learningUnit.create({
+      data: this.unitData(
+        teacherId,
+        dto,
+      ) as Prisma.LearningUnitUncheckedCreateInput,
+    });
   }
 
   async updateUnit(teacherId: number, id: number, dto: UpdateUnitDto) {
     await this.getUnit(teacherId, id);
     if (dto.sectionId) await this.scope.section(teacherId, dto.sectionId);
-    return this.prisma.learningUnit.update({ where: { id }, data: this.unitData(teacherId, dto) });
+    return this.prisma.learningUnit.update({
+      where: { id },
+      data: this.unitData(teacherId, dto),
+    });
   }
 
   async removeUnit(teacherId: number, id: number) {
     await this.getUnit(teacherId, id);
-    await this.prisma.learningUnit.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.learningUnit.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   private unitData(teacherId: number, dto: UpdateUnitDto) {
@@ -100,6 +120,9 @@ export class PlanningService {
       specificCompetenceIds: dto.specificCompetenceIds,
       indicatorIds: dto.indicatorIds,
       contentIds: dto.contentIds,
+      axisIds: dto.axisIds ?? [],
+      capacityIds: dto.capacityIds ?? [],
+      performanceIds: dto.performanceIds ?? [],
       evaluationCriteria: dto.evaluationCriteria,
       evidences: dto.evidences,
       aiGenerated: dto.aiGenerated,
@@ -110,7 +133,13 @@ export class PlanningService {
 
   listPlans(
     teacherId: number,
-    filter: { sectionId?: number; unitId?: number; from?: string; to?: string; q?: string },
+    filter: {
+      sectionId?: number;
+      unitId?: number;
+      from?: string;
+      to?: string;
+      q?: string;
+    },
   ) {
     const q = filter.q?.trim();
     return this.prisma.lessonPlan.findMany({
@@ -168,6 +197,9 @@ export class PlanningService {
         specificCompetenceIds: dto.specificCompetenceIds ?? [],
         indicatorIds: dto.indicatorIds ?? [],
         contentIds: dto.contentIds ?? [],
+        axisIds: dto.axisIds ?? [],
+        capacityIds: dto.capacityIds ?? [],
+        performanceIds: dto.performanceIds ?? [],
         moments: json(dto.moments),
         evaluation: dto.evaluation ? json(dto.evaluation) : undefined,
         assignment: dto.assignment,
@@ -198,6 +230,9 @@ export class PlanningService {
         specificCompetenceIds: dto.specificCompetenceIds,
         indicatorIds: dto.indicatorIds,
         contentIds: dto.contentIds,
+        axisIds: dto.axisIds ?? [],
+        capacityIds: dto.capacityIds ?? [],
+        performanceIds: dto.performanceIds ?? [],
         moments: dto.moments ? json(dto.moments) : undefined,
         evaluation: dto.evaluation ? json(dto.evaluation) : undefined,
         assignment: dto.assignment,
@@ -225,6 +260,9 @@ export class PlanningService {
         specificCompetenceIds: plan.specificCompetenceIds,
         indicatorIds: plan.indicatorIds,
         contentIds: plan.contentIds,
+        axisIds: plan.axisIds,
+        capacityIds: plan.capacityIds,
+        performanceIds: plan.performanceIds,
         moments: json(plan.moments),
         evaluation: plan.evaluation ? json(plan.evaluation) : undefined,
         assignment: plan.assignment,
@@ -235,7 +273,10 @@ export class PlanningService {
 
   async removePlan(teacherId: number, id: number) {
     await this.getPlan(teacherId, id);
-    await this.prisma.lessonPlan.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.lessonPlan.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
     await this.prisma.calendarEvent.updateMany({
       where: { lessonPlanId: id },
       data: { deletedAt: new Date() },
@@ -245,7 +286,12 @@ export class PlanningService {
   /** Una clase planificada con fecha aparece como evento en la agenda. */
   private async syncPlanEvent(
     teacherId: number,
-    plan: { id: number; title: string; date: Date | null; sectionId: number | null },
+    plan: {
+      id: number;
+      title: string;
+      date: Date | null;
+      sectionId: number | null;
+    },
   ) {
     const existing = await this.prisma.calendarEvent.findFirst({
       where: { lessonPlanId: plan.id, deletedAt: null },
@@ -266,7 +312,10 @@ export class PlanningService {
       allDay: true,
     };
     if (existing) {
-      await this.prisma.calendarEvent.update({ where: { id: existing.id }, data });
+      await this.prisma.calendarEvent.update({
+        where: { id: existing.id },
+        data,
+      });
     } else {
       await this.prisma.calendarEvent.create({
         data: { ...data, teacherId, type: 'CLASS', lessonPlanId: plan.id },
@@ -289,7 +338,8 @@ export class PlanningService {
       where: { id, teacherId, deletedAt: null },
       include: { lessonPlan: { select: { id: true, title: true } } },
     });
-    if (!presentation) throw new NotFoundException(`Presentación ${id} no encontrada`);
+    if (!presentation)
+      throw new NotFoundException(`Presentación ${id} no encontrada`);
     return presentation;
   }
 
@@ -307,7 +357,11 @@ export class PlanningService {
     });
   }
 
-  async updatePresentation(teacherId: number, id: number, dto: UpdatePresentationDto) {
+  async updatePresentation(
+    teacherId: number,
+    id: number,
+    dto: UpdatePresentationDto,
+  ) {
     await this.getPresentation(teacherId, id);
     return this.prisma.presentation.update({
       where: { id },
@@ -323,7 +377,10 @@ export class PlanningService {
 
   async removePresentation(teacherId: number, id: number) {
     await this.getPresentation(teacherId, id);
-    await this.prisma.presentation.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.presentation.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   /** Genera la presentación de la plantilla oficial a partir de un plan de clase. */
@@ -335,7 +392,11 @@ export class PlanningService {
       purpose: plan.purpose,
       assignment: plan.assignment,
       gradeName: plan.grade.name,
-      moments: plan.moments as Array<{ moment: string; activities: string[]; metacognition?: string }>,
+      moments: plan.moments as Array<{
+        moment: string;
+        activities: string[];
+        metacognition?: string;
+      }>,
       contents: plan.curriculum.contents
         .filter((c) => c.kind === 'CONCEPT')
         .map((c) => c.description),
@@ -399,6 +460,9 @@ export class PlanningService {
 
   async removeActivity(teacherId: number, id: number) {
     await this.getActivity(teacherId, id);
-    await this.prisma.interactiveActivity.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.interactiveActivity.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 }

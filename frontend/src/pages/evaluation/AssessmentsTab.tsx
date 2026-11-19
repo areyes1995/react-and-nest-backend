@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Plus, Save, Trash2 } from 'lucide-react'
 import { assessmentApi, evaluationApi, type AssessmentInput } from '@services/educraft'
+import { put } from '@services/api'
 import type { AssessmentDetail, ChecklistContent, EvaluationType, RatingScaleContent, RubricContent } from '@services/types'
 import { useFeedback } from '@context/ToastContext'
 import { useAsync } from '@hooks/useAsync'
@@ -11,6 +12,21 @@ import { formatDate, formatScore, sectionLabel, today } from '@lib/format'
 import { cn } from '@lib/cn'
 
 type Row = AssessmentDetail['roster'][number]
+
+type InstrumentScoresResult = {
+  assessmentId: number
+  saved: number
+  rows: Array<{ studentId: number; score: number | null; instrumentData: Record<string, unknown> }>
+}
+
+async function saveInstrumentGrid(
+  id: number,
+  entries: Array<{ studentId: number; instrumentData: Record<string, unknown>; delivered: boolean }>,
+): Promise<InstrumentScoresResult> {
+  const res = await put<InstrumentScoresResult>(`/assessments/${id}/instrument-scores`, { entries })
+  if (!res.ok) throw new Error(res.error || 'No se pudo guardar el instrumento')
+  return res.data
+}
 
 /** Puntuación a partir de las respuestas del instrumento. */
 function scoreFromInstrument(detail: AssessmentDetail, data: Record<string, unknown> | null): number | null {
@@ -51,9 +67,11 @@ function ScoringModal({ assessmentId, onClose, onSaved }: { assessmentId: number
   const [rows, setRows] = useState<Row[]>([])
   const [saving, setSaving] = useState(false)
   const [active, setActive] = useState<number | null>(null)
+  const [view, setView] = useState<'manual' | 'instrument'>('manual')
 
   useEffect(() => {
     setDetail(null)
+    setView('manual')
     if (!assessmentId) return
     assessmentApi.get(assessmentId).then((d) => {
       setDetail(d)
@@ -93,14 +111,36 @@ function ScoringModal({ assessmentId, onClose, onSaved }: { assessmentId: number
       title={detail?.title ?? 'Calificar'}
       subtitle={detail ? `${detail.section ? sectionLabel(detail.section.grade.name, detail.section.name) : ''} · P${detail.period} · PC${detail.block} · Máximo ${detail.maxScore} · ${graded}/${rows.length} calificados` : undefined}
       footer={
-        <Button onClick={save} loading={saving} icon={<Save className="h-4 w-4" />}>
-          Guardar calificaciones
-        </Button>
+        inst && view === 'instrument' ? undefined : (
+          <Button onClick={save} loading={saving} icon={<Save className="h-4 w-4" />}>
+            Guardar calificaciones
+          </Button>
+        )
       }
     >
       {!detail ? (
         <Spinner />
       ) : (
+        <div className="space-y-3">
+          {inst && (
+            <div className="flex flex-wrap gap-1">
+              <button className={`chip ${view === 'manual' ? 'chip-active' : ''}`} onClick={() => setView('manual')}>Notas</button>
+              <button className={`chip ${view === 'instrument' ? 'chip-active' : ''}`} onClick={() => setView('instrument')}>Cuadrícula del instrumento</button>
+            </div>
+          )}
+          {view === 'instrument' && inst ? (
+            <InstrumentGrid
+              detail={detail}
+              rows={rows}
+              onSaved={(result) => {
+                setRows((list) => list.map((r) => {
+                  const saved = result.rows.find((x) => x.studentId === r.student.id)
+                  return saved ? { ...r, score: saved.score, instrumentData: saved.instrumentData, delivered: saved.score != null ? true : r.delivered } : r
+                }))
+                onSaved()
+              }}
+            />
+          ) : (
         <div className={cn('grid gap-4', inst && 'lg:grid-cols-[1fr_26rem]')}>
           <div className="overflow-x-auto rounded-2xl border border-line">
             <table className="table">
@@ -172,8 +212,138 @@ function ScoringModal({ assessmentId, onClose, onSaved }: { assessmentId: number
             </div>
           )}
         </div>
+          )}
+        </div>
       )}
     </Modal>
+  )
+}
+
+function InstrumentGrid({ detail, rows, onSaved }: { detail: AssessmentDetail; rows: Row[]; onSaved: (result: InstrumentScoresResult) => void }) {
+  const { success, error } = useFeedback()
+  const inst = detail.instrument!
+  const [marks, setMarks] = useState<Record<number, Record<string, unknown>>>(() =>
+    Object.fromEntries(rows.map((r) => [r.student.id, (r.instrumentData ?? {}) as Record<string, unknown>])),
+  )
+  const [saving, setSaving] = useState(false)
+
+  const dataFor = (studentId: number) => marks[studentId] ?? {}
+  const setData = (studentId: number, patch: Record<string, unknown>) =>
+    setMarks((prev) => ({ ...prev, [studentId]: { ...(prev[studentId] ?? {}), ...patch } }))
+
+  const columns =
+    inst.type === 'RUBRIC'
+      ? (inst.content as RubricContent).criteria.map((c) => c.criterion)
+      : inst.type === 'CHECKLIST'
+        ? (inst.content as ChecklistContent).items.map((i) => i.text)
+        : (inst.content as RatingScaleContent).items.map((i) => i.text)
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const result = await saveInstrumentGrid(
+        detail.id,
+        rows.map((r) => ({ studentId: r.student.id, instrumentData: dataFor(r.student.id), delivered: r.delivered })),
+      )
+      onSaved(result)
+      success('Instrumento guardado', `${result.saved} estudiante(s) actualizado(s).`)
+    } catch (err) {
+      error('No se pudo guardar', (err as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const cell = (row: Row, index: number) => {
+    const data = dataFor(row.student.id)
+    if (inst.type === 'RUBRIC') {
+      const content = inst.content as RubricContent
+      const levels = (data.levels as Record<string, number> | undefined) ?? {}
+      return (
+        <select
+          className="input h-8 px-1 text-xs"
+          value={levels[index] ?? ''}
+          title={content.criteria[index]?.descriptors[levels[index]]}
+          onChange={(ev) => {
+            const next = { ...levels }
+            if (ev.target.value === '') delete next[index]
+            else next[index] = Number(ev.target.value)
+            setData(row.student.id, { levels: next })
+          }}
+        >
+          <option value="">—</option>
+          {content.levels.map((label, level) => (
+            <option key={level} value={level}>{label}</option>
+          ))}
+        </select>
+      )
+    }
+    if (inst.type === 'CHECKLIST') {
+      const checked = (data.checked as number[] | undefined) ?? []
+      return (
+        <input
+          type="checkbox"
+          className="h-4 w-4 accent-violet-500"
+          checked={checked.includes(index)}
+          onChange={(ev) => setData(row.student.id, { checked: ev.target.checked ? [...checked, index] : checked.filter((x) => x !== index) })}
+        />
+      )
+    }
+    const content = inst.content as RatingScaleContent
+    const values = (data.values as Record<string, string> | undefined) ?? {}
+    return (
+      <select
+        className="input h-8 px-1 text-xs"
+        value={values[index] ?? ''}
+        onChange={(ev) => {
+          const next = { ...values }
+          if (ev.target.value === '') delete next[index]
+          else next[index] = ev.target.value
+          setData(row.student.id, { values: next })
+        }}
+      >
+        <option value="">—</option>
+        {content.levels.map((level) => (
+          <option key={level.value} value={level.value} title={level.label}>{level.value}</option>
+        ))}
+      </select>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="section-title">{inst.title}</p>
+        <Button size="sm" icon={<Save className="h-3.5 w-3.5" />} loading={saving} onClick={save}>
+          Guardar marcas
+        </Button>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-line">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Estudiante</th>
+              {columns.map((label, index) => (
+                <th key={index} className="min-w-[7rem] text-center text-[0.7rem]">{label}</th>
+              ))}
+              <th className="w-20 text-center">Nota</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.student.id}>
+                <td className="whitespace-nowrap text-xs font-medium">{row.student.lastName}, {row.student.firstName}</td>
+                {columns.map((_, index) => (
+                  <td key={index} className="text-center">{cell(row, index)}</td>
+                ))}
+                <td className="text-center text-xs font-bold text-emerald-700">{formatScore(scoreFromInstrument(detail, dataFor(row.student.id)), 1)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-ink-3">La nota se calcula automáticamente y se guarda en el registro de la actividad.</p>
+    </div>
   )
 }
 

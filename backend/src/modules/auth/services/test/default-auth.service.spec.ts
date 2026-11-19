@@ -51,14 +51,14 @@ describe('DefaultAuthService', () => {
     const deps = makeDeps();
     deps.systemUserService.getAuthUserByEmail.mockResolvedValue(baseUser);
     const svc = new DefaultAuthService(
-      deps.jwtService as any,
-      deps.systemUserService as any,
-      deps.authLogService as any,
-      deps.prisma as any,
-      deps.mailerService as any,
-      deps.accountTokenService as any,
+      deps.jwtService,
+      deps.systemUserService,
+      deps.authLogService,
+      deps.prisma,
+      deps.mailerService,
+      deps.accountTokenService,
     );
-    const out = await svc.login({ email: 'a@b.c', password: 'x' } as any);
+    const out = await svc.login({ email: 'a@b.c', password: 'x' });
     expect(out.token).toBe('jwt');
     expect(deps.jwtService.sign).toHaveBeenCalled();
   });
@@ -68,12 +68,12 @@ describe('DefaultAuthService', () => {
     const deps = makeDeps();
     deps.systemUserService.getAuthUserByEmail.mockResolvedValue(baseUser);
     const svc = new DefaultAuthService(
-      deps.jwtService as any,
-      deps.systemUserService as any,
-      deps.authLogService as any,
-      deps.prisma as any,
-      deps.mailerService as any,
-      deps.accountTokenService as any,
+      deps.jwtService,
+      deps.systemUserService,
+      deps.authLogService,
+      deps.prisma,
+      deps.mailerService,
+      deps.accountTokenService,
     );
     await expect(
       svc.login({ email: 'a@b.c', password: 'bad' } as any),
@@ -88,12 +88,12 @@ describe('DefaultAuthService', () => {
       mustChangePassword: true,
     });
     const svc = new DefaultAuthService(
-      deps.jwtService as any,
-      deps.systemUserService as any,
-      deps.authLogService as any,
-      deps.prisma as any,
-      deps.mailerService as any,
-      deps.accountTokenService as any,
+      deps.jwtService,
+      deps.systemUserService,
+      deps.authLogService,
+      deps.prisma,
+      deps.mailerService,
+      deps.accountTokenService,
     );
     await expect(
       svc.login({ email: 'a@b.c', password: 'x' } as any),
@@ -108,12 +108,12 @@ describe('DefaultAuthService', () => {
       emailVerified: false,
     });
     const svc = new DefaultAuthService(
-      deps.jwtService as any,
-      deps.systemUserService as any,
-      deps.authLogService as any,
-      deps.prisma as any,
-      deps.mailerService as any,
-      deps.accountTokenService as any,
+      deps.jwtService,
+      deps.systemUserService,
+      deps.authLogService,
+      deps.prisma,
+      deps.mailerService,
+      deps.accountTokenService,
     );
     await expect(
       svc.login({ email: 'a@b.c', password: 'x' } as any),
@@ -126,12 +126,12 @@ describe('DefaultAuthService', () => {
       throw new Error('bad');
     });
     const svc = new DefaultAuthService(
-      deps.jwtService as any,
-      deps.systemUserService as any,
-      deps.authLogService as any,
-      deps.prisma as any,
-      deps.mailerService as any,
-      deps.accountTokenService as any,
+      deps.jwtService,
+      deps.systemUserService,
+      deps.authLogService,
+      deps.prisma,
+      deps.mailerService,
+      deps.accountTokenService,
     );
     await expect(svc.refresh('bad')).rejects.toBeInstanceOf(
       UnauthorizedException,

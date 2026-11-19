@@ -4,7 +4,12 @@
 // permiso RBAC requerido y auditoría de escrituras.
 // ──────────────────────────────────────────────
 
-import { applyDecorators, Controller, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  applyDecorators,
+  Controller,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from 'src/modules/auth/guards/jwt.guard';
 import { RolesGuard } from 'src/modules/auth/guards/roles.guard';

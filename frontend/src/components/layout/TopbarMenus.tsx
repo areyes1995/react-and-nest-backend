@@ -21,7 +21,13 @@ import { useAuth } from '@context/AuthContext'
 import { useTheme } from '@context/ThemeContext'
 import { useAssistant } from '@context/AssistantContext'
 import { useFeedback } from '@context/ToastContext'
-import { notificationApi, teacherApi } from '@services/educraft'
+import {
+  messagingApi,
+  notificationApi,
+  teacherApi,
+  type ConversationSummary,
+  type MessagingMessage,
+} from '@services/educraft'
 import type { Notification, TeacherProfile } from '@services/types'
 import { Avatar, Latex, Modal, Popover, Toggle } from '@components/ui'
 import { cn } from '@lib/cn'
@@ -130,12 +136,35 @@ export function NotificationsMenu() {
 export function MessagesMenu() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<'messages' | 'shared'>('messages')
+  const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [shared, setShared] = useState<MessagingMessage[]>([])
+
+  useEffect(() => {
+    void Promise.all([messagingApi.conversations(), messagingApi.shared()])
+      .then(([list, items]) => {
+        setConversations(list)
+        setShared(items)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  const unread = conversations.reduce((total, c) => total + c.unreadCount, 0)
+  const go = (close: () => void, path: string) => {
+    close()
+    navigate(path)
+  }
+
   return (
     <Popover
       width="w-80"
       trigger={({ toggle }) => (
-        <button className="icon-btn" onClick={toggle} aria-label="Mensajes y elementos compartidos">
+        <button className="icon-btn relative" onClick={toggle} aria-label="Mensajes y elementos compartidos">
           <MessageCircle className="h-[1.15rem] w-[1.15rem]" />
+          {unread > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 grid h-[1.1rem] min-w-[1.1rem] place-items-center rounded-full bg-brand-pink px-1 text-[0.62rem] font-bold text-white ring-2 ring-surface">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
         </button>
       )}
     >
@@ -152,28 +181,67 @@ export function MessagesMenu() {
               </button>
             ))}
           </div>
-          <div className="px-4 py-6 text-center">
-            <div className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-2xl bg-soft-purple text-brand-purple">
-              {tab === 'messages' ? <MessageCircle className="h-5 w-5" /> : <Share2 className="h-5 w-5" />}
+          {tab === 'messages' ? (
+            conversations.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <div className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-2xl bg-soft-purple text-brand-purple">
+                  <MessageCircle className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-ink">Sin conversaciones todavía</p>
+                <p className="mt-1 text-xs text-ink-3">Inicia una conversación con tus colegas para coordinar clases.</p>
+              </div>
+            ) : (
+              <ul className="max-h-72 divide-y divide-[var(--border)] overflow-y-auto">
+                {conversations.slice(0, 6).map((c) => (
+                  <li key={c.id}>
+                    <button
+                      onClick={() => go(close, `/app/mensajes?c=${c.id}`)}
+                      className="flex w-full items-start gap-2 px-4 py-3 text-left transition hover:brightness-[0.98]"
+                    >
+                      <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-purple" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-ink">
+                          {c.title || c.participants.map((p) => p.name).join(', ')}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-ink-3">{c.lastMessage?.content ?? 'Aún sin mensajes'}</p>
+                      </div>
+                      {c.unreadCount > 0 && <span className="mt-1 grid h-5 min-w-5 place-items-center rounded-full bg-brand-pink px-1 text-[0.65rem] font-bold text-white">{c.unreadCount}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : shared.length === 0 ? (
+            <div className="px-4 py-6 text-center">
+              <div className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-2xl bg-soft-purple text-brand-purple">
+                <Share2 className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-semibold text-ink">Nada compartido contigo aún</p>
+              <p className="mt-1 text-xs text-ink-3">Las programaciones y recursos que compartan contigo aparecerán aquí.</p>
             </div>
-            <p className="text-sm font-semibold text-ink">
-              {tab === 'messages' ? 'Sin conversaciones todavía' : 'Nada compartido contigo aún'}
-            </p>
-            <p className="mt-1 text-xs text-ink-3">
-              {tab === 'messages'
-                ? 'La mensajería con coordinación y colegas aparecerá aquí.'
-                : 'Las programaciones y recursos que compartan contigo aparecerán aquí.'}
-            </p>
-          </div>
+          ) : (
+            <ul className="max-h-72 divide-y divide-[var(--border)] overflow-y-auto">
+              {shared.slice(0, 6).map((m) => (
+                <li key={m.id}>
+                  <button
+                    onClick={() => go(close, `/app/mensajes?tab=shared`)}
+                    className="block w-full px-4 py-3 text-left transition hover:brightness-[0.98]"
+                  >
+                    <p className="flex items-center gap-2 truncate text-sm font-semibold text-ink">
+                      <Share2 className="h-4 w-4 shrink-0 text-brand-purple" /> {m.sharedResource?.title ?? m.content}
+                    </p>
+                    <p className="mt-0.5 text-xs text-ink-3">{m.senderName} · {relativeTime(m.createdAt)}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="border-t border-line p-3">
             <button
-              onClick={() => {
-                close()
-                navigate('/app/planificacion?tab=programaciones')
-              }}
+              onClick={() => go(close, tab === 'shared' && conversations.length ? `/app/mensajes?c=${conversations[0].id}` : '/app/mensajes?compose=1')}
               className="btn w-full bg-brand-purple text-white hover:brightness-110"
             >
-              <Plus className="h-4 w-4" /> Compartir una nueva programación o recurso
+              <Plus className="h-4 w-4" /> {tab === 'shared' ? 'Compartir un recurso' : 'Nueva conversación'}
             </button>
           </div>
         </div>

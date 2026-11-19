@@ -5,11 +5,86 @@ import { Checkbox, Spinner, Tabs } from '@components/ui'
 import type { ContentKind } from '@services/types'
 import { cn } from '@lib/cn'
 
+export interface CrossCuttingAxis {
+  id: number
+  code: string
+  name: string
+  cycle: number
+  description: string
+  gradeDetails: string[]
+  order: number
+}
+
+export interface Capacity {
+  id: number
+  code: string
+  gradeId: number
+  specificCompetenceId: number
+  description: string
+  order: number
+}
+
+export interface Performance {
+  id: number
+  code: string
+  gradeId: number
+  capacityId: number
+  description: string
+  order: number
+}
+
+// Los tipos compartidos no son propiedad de esta tarea; se amplían aquí para
+// que el selector y el exportador vean los nuevos campos del catálogo.
+declare module '@services/types' {
+  interface GradeCurriculum {
+    axes: CrossCuttingAxis[]
+    capacities: Capacity[]
+    performances: Performance[]
+  }
+  interface ResolvedCurriculum {
+    axes: CrossCuttingAxis[]
+    capacities: Capacity[]
+    performances: Performance[]
+  }
+  interface LessonPlanInput {
+    axisIds?: number[]
+    capacityIds?: number[]
+    performanceIds?: number[]
+  }
+  interface LearningUnit {
+    axisIds?: number[]
+    capacityIds?: number[]
+    performanceIds?: number[]
+  }
+}
+
+declare module '@services/educraft' {
+  interface UnitInput {
+    axisIds?: number[]
+    capacityIds?: number[]
+    performanceIds?: number[]
+  }
+}
+
 export interface CurriculumSelection {
   specificCompetenceIds: number[]
   indicatorIds: number[]
   contentIds: number[]
+  axisIds?: number[]
+  capacityIds?: number[]
+  performanceIds?: number[]
 }
+
+export const EMPTY_CURRICULUM_SELECTION: CurriculumSelection = {
+  specificCompetenceIds: [],
+  indicatorIds: [],
+  contentIds: [],
+  axisIds: [],
+  capacityIds: [],
+  performanceIds: [],
+}
+
+type TabKey = 'competences' | 'indicators' | 'capacities' | 'performances' | 'axes' | 'contents'
 
 const KIND_LABEL: Record<ContentKind, string> = {
   CONCEPT: 'Conceptos',
@@ -18,8 +93,8 @@ const KIND_LABEL: Record<ContentKind, string> = {
 }
 
 /**
- * Selector de la Adecuación Curricular del grado: competencias
- * específicas, indicadores de logro y contenidos. Los elementos se
+ * Selector de la Adecuación Curricular del grado: ejes, competencias,
+ * capacidades, desempeños, indicadores y contenidos. Los elementos se
  * pueden arrastrar (dataTransfer "application/x-curriculum").
  */
 export function CurriculumPicker({
@@ -34,11 +109,11 @@ export function CurriculumPicker({
   compact?: boolean
 }) {
   const grade = useGradeCurriculum(gradeId)
-  const [tab, setTab] = useState<'competences' | 'indicators' | 'contents'>('competences')
+  const [tab, setTab] = useState<TabKey>('competences')
   const [filter, setFilter] = useState('')
 
   const toggle = (key: keyof CurriculumSelection, id: number) => {
-    const list = value[key]
+    const list = value[key] ?? []
     onChange({ ...value, [key]: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] })
   }
 
@@ -51,6 +126,16 @@ export function CurriculumPicker({
 
   if (!gradeId) return <p className="rounded-xl bg-surface-3 p-3 text-xs text-ink-3">Selecciona un grado para ver su malla curricular.</p>
   if (!grade) return <Spinner className="py-6" />
+
+  const axes = grade.axes ?? []
+  const capacities = grade.capacities ?? []
+  const performances = grade.performances ?? []
+  const competenceName = (id: number) =>
+    grade.specificCompetences.find((c) => c.id === id)?.fundamental.name ?? 'Competencia'
+  const capacityLabel = (id: number) => {
+    const capacity = capacities.find((c) => c.id === id)
+    return capacity ? `${competenceName(capacity.specificCompetenceId)}: ${capacity.description}` : 'Capacidad'
+  }
 
   const drag = (kind: string, id: number, text: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData('application/x-curriculum', JSON.stringify({ kind, id, text }))
@@ -65,7 +150,10 @@ export function CurriculumPicker({
           onChange={setTab}
           items={[
             { key: 'competences', label: 'Competencias', count: value.specificCompetenceIds.length },
+            { key: 'capacities', label: 'Capacidades', count: value.capacityIds?.length ?? 0 },
+            { key: 'performances', label: 'Desempeños', count: value.performanceIds?.length ?? 0 },
             { key: 'indicators', label: 'Indicadores', count: value.indicatorIds.length },
+            { key: 'axes', label: 'Ejes', count: value.axisIds?.length ?? 0 },
             { key: 'contents', label: 'Contenidos', count: value.contentIds.length },
           ]}
         />
@@ -94,6 +182,43 @@ export function CurriculumPicker({
                 />
               </div>
             ))}
+
+        {tab === 'capacities' &&
+          capacities
+            .filter((c) => match(c.description + competenceName(c.specificCompetenceId)))
+            .map((c) => (
+              <div key={c.id} draggable onDragStart={drag('capacity', c.id, c.description)} className="rounded-xl border border-line bg-surface p-2.5">
+                <Checkbox
+                  checked={value.capacityIds?.includes(c.id) ?? false}
+                  onChange={() => toggle('capacityIds', c.id)}
+                  label={
+                    <span>
+                      <span className="block text-[0.7rem] font-bold uppercase tracking-wide text-brand-purple">{competenceName(c.specificCompetenceId)}</span>
+                      <span className="text-xs text-ink-2">{c.description}</span>
+                    </span>
+                  }
+                />
+              </div>
+            ))}
+
+        {tab === 'performances' &&
+          performances
+            .filter((p) => match(p.description + capacityLabel(p.capacityId)))
+            .map((p) => (
+              <div key={p.id} draggable onDragStart={drag('performance', p.id, p.description)} className="rounded-xl border border-line bg-surface p-2.5">
+                <Checkbox
+                  checked={value.performanceIds?.includes(p.id) ?? false}
+                  onChange={() => toggle('performanceIds', p.id)}
+                  label={
+                    <span>
+                      <span className="block text-[0.7rem] font-bold uppercase tracking-wide text-brand-purple">{capacityLabel(p.capacityId)}</span>
+                      <span className="text-xs text-ink-2">{p.description}</span>
+                    </span>
+                  }
+                />
+              </div>
+            ))}
+
         {tab === 'indicators' &&
           grade.indicators
             .filter((i) => match(i.description))
@@ -102,6 +227,28 @@ export function CurriculumPicker({
                 <Checkbox checked={value.indicatorIds.includes(i.id)} onChange={() => toggle('indicatorIds', i.id)} label={<span className="text-xs text-ink-2">{i.description}</span>} />
               </div>
             ))}
+
+        {tab === 'axes' &&
+          axes
+            .filter((a) => match(a.name + a.description))
+            .map((a) => (
+              <div key={a.id} draggable onDragStart={drag('axis', a.id, a.name)} className="rounded-xl border border-line bg-surface p-2.5">
+                <Checkbox
+                  checked={value.axisIds?.includes(a.id) ?? false}
+                  onChange={() => toggle('axisIds', a.id)}
+                  label={
+                    <span>
+                      <span className="block text-[0.7rem] font-bold uppercase tracking-wide text-brand-purple">Ciclo {a.cycle} · {a.name}</span>
+                      <span className="block text-xs text-ink-2">{a.description}</span>
+                      {!compact && a.gradeDetails.length > 0 && (
+                        <span className="block text-[0.7rem] text-ink-3">{a.gradeDetails.join(' · ')}</span>
+                      )}
+                    </span>
+                  }
+                />
+              </div>
+            ))}
+
         {tab === 'contents' &&
           (Object.keys(contentsByKind) as ContentKind[]).map((kind) => {
             const list = contentsByKind[kind].filter((c) => match(c.description + (c.block ?? '')))

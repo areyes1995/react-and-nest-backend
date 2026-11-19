@@ -19,6 +19,15 @@ model TeacherProfile {
   bio          String? @db.Text
 
   googleCalendarSync Boolean @default(false)
+
+  /// Sincronización con Google Calendar. Los tokens se guardan cifrados
+  /// (AES-256-GCM) con una clave derivada de las credenciales OAuth.
+  googleAccessToken    String?   @db.Text
+  googleRefreshToken   String?   @db.Text
+  googleTokenExpiresAt DateTime?
+  googleCalendarId     String?   @db.VarChar(255)
+  googleLastSyncAt     DateTime?
+
   /// Preferencias de interfaz (tema, vista por defecto, etc.).
   preferences        Json    @default("{}")
 

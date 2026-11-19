@@ -1,11 +1,26 @@
-import { Body, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from 'src/modules/auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../shared/authenticated-user';
 import { EducraftController } from '../shared/educraft-controller.decorator';
 import { addDays, formatDateOnly } from '../shared/dates.util';
 import { CalendarService } from './calendar.service';
-import { CreateEventDto, UpdateEventDto } from './dto/calendar.dto';
+import {
+  CalendarExportDto,
+  CreateEventDto,
+  UpdateEventDto,
+} from './dto/calendar.dto';
 
 @EducraftController('calendar', 'Calendario académico', 'planning:manage')
 export class CalendarController {
@@ -14,8 +29,15 @@ export class CalendarController {
   @Get()
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
-  @ApiQuery({ name: 'classes', required: false, description: 'false para omitir clases del horario' })
-  @ApiResponse({ status: 200, description: 'Agenda: eventos, clases y feriados.' })
+  @ApiQuery({
+    name: 'classes',
+    required: false,
+    description: 'false para omitir clases del horario',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Agenda: eventos, clases y feriados.',
+  })
   agenda(
     @CurrentUser() user: AuthenticatedUser,
     @Query('from') from?: string,
@@ -31,8 +53,30 @@ export class CalendarController {
     );
   }
 
+  @Get('export.ics')
+  @Header('Content-Type', 'text/calendar; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="educraft-agenda.ics"')
+  @ApiResponse({
+    status: 200,
+    description: 'Agenda en formato iCalendar (.ics).',
+  })
+  exportIcs(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CalendarExportDto,
+  ) {
+    const today = new Date();
+    return this.calendar.exportIcs(
+      user.id,
+      query.from ?? formatDateOnly(today),
+      query.to ?? formatDateOnly(addDays(today, 90)),
+    );
+  }
+
   @Get('events/:id')
-  get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.calendar.get(user.id, id);
   }
 
@@ -52,7 +96,10 @@ export class CalendarController {
 
   @Delete('events/:id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.calendar.remove(user.id, id);
   }
 }

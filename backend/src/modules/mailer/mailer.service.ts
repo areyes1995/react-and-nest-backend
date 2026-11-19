@@ -21,7 +21,8 @@ export class MailerService {
 
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {
     this.from =
-      this.config.get<string>('MAIL_FROM') || 'Educraft XYZ <no-reply@educraft.app>';
+      this.config.get<string>('MAIL_FROM') ||
+      'Educraft XYZ <no-reply@educraft.app>';
     this.frontendUrl =
       this.config.get<string>('FRONTEND_URL') || 'http://localhost:5173';
 

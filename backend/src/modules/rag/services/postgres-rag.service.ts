@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
-import { RagService } from './interfaces/rag.service';
-import { RagSearchQueryDto } from '../dtos/rag-search-query.dto';
 import {
-  RagChunkDto,
-  RagSearchResultDto,
-} from '../dtos/rag-search-result.dto';
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
+import { PrismaService } from 'prisma/prisma.service';
+import { RagIngestInput, RagService } from './interfaces/rag.service';
+import { RagSearchQueryDto } from '../dtos/rag-search-query.dto';
+import { RagChunkDto, RagSearchResultDto } from '../dtos/rag-search-result.dto';
 import { RagTextSearchQueryDto } from '../dtos/rag-text-search-query.dto';
 import {
   RagTextChunkDto,
@@ -79,11 +81,88 @@ interface RagContextRow {
   page_end: number | null;
 }
 
+const CHUNK_SIZE = 1200;
+const CHUNK_OVERLAP = 150;
+
+function chunkText(text: string): string[] {
+  const paragraphs = text
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const chunks: string[] = [];
+  let current = '';
+  for (const paragraph of paragraphs) {
+    if (current && current.length + paragraph.length + 2 > CHUNK_SIZE) {
+      chunks.push(current);
+      current = `${current.slice(-CHUNK_OVERLAP)}\n\n${paragraph}`;
+    } else {
+      current = current ? `${current}\n\n${paragraph}` : paragraph;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks.length ? chunks : [text];
+}
+
 @Injectable()
 export class PostgresRagService implements RagService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  async ingest(input: RagIngestInput): Promise<RagDocumentDto> {
+    const text = input.text.replace(/\r\n/g, '\n').trim();
+    if (text.length < 20) {
+      throw new BadRequestException(
+        'El documento no contiene texto suficiente para indexar.',
+      );
+    }
+    const chunks = chunkText(text);
+    const fileHash = createHash('sha256').update(input.text).digest('hex');
+    const sourcePath = `ingest://${input.originalFilename || input.title || 'texto'}`;
+
+    return this.prisma.$transaction(async (tx) => {
+      const document = await tx.document.create({
+        data: {
+          sourcePath,
+          originalFilename: input.originalFilename,
+          fileHashSha256: fileHash,
+          fileSizeBytes: BigInt(
+            input.fileSizeBytes ?? Buffer.byteLength(input.text, 'utf8'),
+          ),
+          mimeType: input.mimeType ?? 'text/plain',
+          title: input.title ?? input.originalFilename,
+          department: input.department ?? null,
+          project: input.project ?? null,
+          sensitivity: input.sensitivity ?? 'internal',
+          status: 'active',
+          metadata: { ingestedVia: 'api', chunkCount: chunks.length },
+        },
+      });
+
+      for (const [index, content] of chunks.entries()) {
+        const chunkHash = createHash('sha256').update(content).digest('hex');
+        await tx.$executeRaw`
+          INSERT INTO document_chunks
+            (document_id, chunk_index, chunk_hash_sha256, content, token_count, metadata, search_vector, created_at)
+          VALUES
+            (${document.id}, ${index}::smallint, ${chunkHash}, ${content}, ${Math.ceil(content.length / 4)}::int, ${JSON.stringify({})}::jsonb, to_tsvector('simple', ${content}), NOW())
+          ON CONFLICT (document_id, chunk_index) DO NOTHING
+        `;
+      }
+
+      return {
+        id: Number(document.id),
+        title: document.title,
+        originalFilename: document.originalFilename,
+        sourcePath: document.sourcePath,
+        department: document.department,
+        project: document.project,
+        sensitivity: document.sensitivity,
+        status: document.status,
+        chunkCount: chunks.length,
+        createdAt: document.createdAt,
+      };
+    });
+  }
 
   private buildFilters(
     query: { department?: string; project?: string; sensitivity?: string },
@@ -182,7 +261,9 @@ export class PostgresRagService implements RagService {
     };
   }
 
-  async searchText(query: RagTextSearchQueryDto): Promise<RagTextSearchResultDto> {
+  async searchText(
+    query: RagTextSearchQueryDto,
+  ): Promise<RagTextSearchResultDto> {
     const startedAt = Date.now();
     const limit = query.limit ?? 5;
     const tsquery = Prisma.sql`websearch_to_tsquery('simple', ${query.q})`;

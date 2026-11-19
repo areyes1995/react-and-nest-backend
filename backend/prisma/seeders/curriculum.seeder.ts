@@ -2,20 +2,25 @@
 // 📚 CURRICULUM SEEDER — Adecuación Curricular de Matemática (MINERD)
 // =============================================================================
 //
-// Siembra grados, competencias fundamentales, competencias específicas,
-// contenidos, indicadores de logro y criterios de evaluación.
+// Siembra ejes transversales por ciclo, grados, competencias fundamentales y
+// específicas, capacidades, desempeños, contenidos, indicadores de logro y
+// criterios de evaluación.
 //
-// ✅ IDEMPOTENTE — grados/competencias por upsert; contenidos, indicadores y
-//    criterios solo se insertan si el grado/ciclo aún no los tiene, para no
-//    cambiar los ids referenciados por planificaciones existentes.
+// ✅ IDEMPOTENTE — catálogos con clave estable por upsert; contenidos,
+//    indicadores y criterios solo se insertan si el grado/ciclo aún no los
+//    tiene, para no cambiar los ids referenciados por planificaciones
+//    existentes. La competencia de cada indicador se declara explícitamente
+//    en el archivo de datos (INDICATOR_FUNDAMENTALS), sin heurísticos.
 //
 // =============================================================================
 
 import { ContentKind, PrismaClient } from '@prisma/client';
 import {
+  CROSS_CUTTING_AXES,
   EVALUATION_CRITERIA,
   FUNDAMENTAL_COMPETENCES,
   GRADES,
+  INDICATOR_FUNDAMENTALS,
   type FundamentalCode,
 } from './data/curriculum-matematica';
 
@@ -33,6 +38,20 @@ export async function seedCurriculum(prisma: PrismaClient): Promise<void> {
   }
   console.log(`  ✅  ${fundamentalIds.size} competencias fundamentales`);
 
+  for (const axis of CROSS_CUTTING_AXES) {
+    await prisma.crossCuttingAxis.upsert({
+      where: { code_cycle: { code: axis.code, cycle: axis.cycle } },
+      update: {
+        name: axis.name,
+        description: axis.description,
+        gradeDetails: axis.gradeDetails,
+        order: axis.order,
+      },
+      create: axis,
+    });
+  }
+  console.log(`  ✅  ${CROSS_CUTTING_AXES.length} ejes transversales`);
+
   for (const g of GRADES) {
     const grade = await prisma.curriculumGrade.upsert({
       where: { code: g.code },
@@ -40,12 +59,35 @@ export async function seedCurriculum(prisma: PrismaClient): Promise<void> {
       create: { code: g.code, name: g.name, cycle: g.cycle, order: g.order, focus: g.focus },
     });
 
-    for (const [code, description] of Object.entries(g.specificCompetences)) {
-      const fundamentalId = fundamentalIds.get(code as FundamentalCode)!;
-      await prisma.specificCompetence.upsert({
+    let capacityOrder = 0;
+    for (const f of FUNDAMENTAL_COMPETENCES) {
+      const description = g.specificCompetences[f.code];
+      const fundamentalId = fundamentalIds.get(f.code)!;
+      const specific = await prisma.specificCompetence.upsert({
         where: { gradeId_fundamentalId: { gradeId: grade.id, fundamentalId } },
         update: { description },
         create: { gradeId: grade.id, fundamentalId, description },
+      });
+
+      // La competencia específica del grado se registra también como
+      // capacidad explícita; los desempeños se derivan de los indicadores.
+      const capacityCode = `${g.code}-${f.code}`;
+      const order = capacityOrder++;
+      await prisma.capacity.upsert({
+        where: { code: capacityCode },
+        update: {
+          gradeId: grade.id,
+          specificCompetenceId: specific.id,
+          description,
+          order,
+        },
+        create: {
+          code: capacityCode,
+          gradeId: grade.id,
+          specificCompetenceId: specific.id,
+          description,
+          order,
+        },
       });
     }
 
@@ -77,15 +119,46 @@ export async function seedCurriculum(prisma: PrismaClient): Promise<void> {
       });
     }
 
+    const indicatorFundamentals = INDICATOR_FUNDAMENTALS[g.code] ?? [];
     const indicatorCount = await prisma.achievementIndicator.count({ where: { gradeId: grade.id } });
     if (indicatorCount === 0) {
       await prisma.achievementIndicator.createMany({
-        data: g.indicators.map((description, order) => ({
-          gradeId: grade.id,
-          fundamentalId: guessFundamental(description, fundamentalIds),
-          description,
-          order,
-        })),
+        data: g.indicators.map((description, order) => {
+          const code = indicatorFundamentals[order];
+          return {
+            gradeId: grade.id,
+            fundamentalId: code ? (fundamentalIds.get(code) ?? null) : null,
+            description,
+            order,
+          };
+        }),
+      });
+    } else {
+      // Un seed anterior pudo asignar la competencia por heurístico; se
+      // corrige la columna sin recrear el indicador (su id se conserva).
+      for (const [order, code] of indicatorFundamentals.entries()) {
+        const indicator = await prisma.achievementIndicator.findFirst({
+          where: { gradeId: grade.id, order },
+        });
+        if (!indicator || !code) continue;
+        await prisma.achievementIndicator.update({
+          where: { id: indicator.id },
+          data: { fundamentalId: fundamentalIds.get(code) ?? null },
+        });
+      }
+    }
+
+    // Un desempeño por indicador, vinculado a la capacidad de su competencia.
+    for (const [order, description] of g.indicators.entries()) {
+      const code = indicatorFundamentals[order];
+      if (!code) continue;
+      const capacity = await prisma.capacity.findUnique({ where: { code: `${g.code}-${code}` } });
+      if (!capacity) continue;
+      const performanceCode = `${g.code}-${code}-${String(order + 1).padStart(2, '0')}`;
+      await prisma.performance.upsert({
+        where: { code: performanceCode },
+        update: { gradeId: grade.id, capacityId: capacity.id, description, order },
+        create: { code: performanceCode, gradeId: grade.id, capacityId: capacity.id, description, order },
       });
     }
 
@@ -106,29 +179,4 @@ export async function seedCurriculum(prisma: PrismaClient): Promise<void> {
     });
   }
   console.log('  ✅  criterios de evaluación por ciclo\n');
-}
-
-/**
- * Los indicadores del documento siguen el orden de las competencias
- * fundamentales (lee/interpreta/comunica → comunicativa, aplica/representa
- * → lógico, resuelve → problemas…). Se asigna por el verbo inicial.
- */
-function guessFundamental(
-  description: string,
-  ids: Map<FundamentalCode, number>,
-): number | null {
-  const d = description.toLowerCase();
-  const rules: Array<[RegExp, FundamentalCode]> = [
-    [/respet|convivencia|espiritual|puesta en común/, 'DESARROLLO_PERSONAL'],
-    [/salud|medio ambiente|comunitario/, 'AMBIENTAL_SALUD'],
-    [/tecnol|reportes? de investigación|informe de investigación/, 'CIENTIFICA_TECNOLOGICA'],
-    [/ética|ético|responsable|actitud/, 'ETICA_CIUDADANA'],
-    [/^resuelve|^emplea diferentes|métodos/, 'RESOLUCION_PROBLEMAS'],
-    [/^aplica lógicamente|^representa|^toma decisiones|^modela|^razona/, 'PENSAMIENTO_LOGICO'],
-    [/^lee|^interpreta|^comunica|^expresa/, 'COMUNICATIVA'],
-  ];
-  for (const [re, code] of rules) {
-    if (re.test(d)) return ids.get(code) ?? null;
-  }
-  return null;
 }

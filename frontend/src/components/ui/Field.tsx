@@ -63,20 +63,23 @@ export function Toggle({
   onChange,
   label,
   disabled,
+  ariaLabel,
 }: {
   checked: boolean
   onChange: (value: boolean) => void
   label?: ReactNode
   disabled?: boolean
+  ariaLabel?: string
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label == null ? ariaLabel ?? 'Activar opción' : undefined}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="inline-flex items-center gap-2 text-sm text-ink-2 disabled:opacity-50"
+      className="inline-flex min-h-11 items-center gap-2 text-sm text-ink-2 disabled:opacity-50"
     >
       <span
         className={cn(
@@ -101,19 +104,22 @@ export function Checkbox({
   onChange,
   label,
   className,
+  ariaLabel,
 }: {
   checked: boolean
   onChange: (value: boolean) => void
   label?: ReactNode
   className?: string
+  ariaLabel?: string
 }) {
   return (
-    <label className={cn('inline-flex cursor-pointer items-start gap-2 text-sm text-ink-2', className)}>
+    <label className={cn('inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-2', className)}>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 cursor-pointer rounded border-line accent-violet-500"
+        aria-label={label == null ? ariaLabel ?? 'Seleccionar opción' : undefined}
+        className="h-4 w-4 shrink-0 cursor-pointer rounded border-line accent-violet-500"
       />
       {label && <span>{label}</span>}
     </label>

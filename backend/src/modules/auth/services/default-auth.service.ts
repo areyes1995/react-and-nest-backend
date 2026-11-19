@@ -188,9 +188,13 @@ export class DefaultAuthService implements AuthService {
       throw new ConflictException('Ya existe una cuenta con ese correo.');
     }
 
-    const role = await this.prisma.role.findUnique({ where: { name: ROLES.DOCENTE } });
+    const role = await this.prisma.role.findUnique({
+      where: { name: ROLES.DOCENTE },
+    });
     if (!role) {
-      throw new NotFoundException('El rol DOCENTE no existe. Ejecuta los seeders.');
+      throw new NotFoundException(
+        'El rol DOCENTE no existe. Ejecuta los seeders.',
+      );
     }
 
     const autoVerify = !this.mailerService.isConfigured();

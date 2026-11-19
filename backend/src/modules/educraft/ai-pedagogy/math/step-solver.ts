@@ -32,7 +32,8 @@ export interface SolutionStep {
 }
 
 export interface StepSolution {
-  kind: 'linear' | 'quadratic' | 'system' | 'simplify' | 'identity' | 'no-solution';
+  kind:
+    'linear' | 'quadratic' | 'system' | 'simplify' | 'identity' | 'no-solution';
   input: string;
   inputLatex: string;
   steps: SolutionStep[];
@@ -42,7 +43,12 @@ export interface StepSolution {
 
 const eq = (l: Poly, r: Poly) => `${toLatex(l)} = ${toLatex(r)}`;
 
-function opText(verbPositive: string, verbNegative: string, value: Fraction, suffix = '') {
+function opText(
+  verbPositive: string,
+  verbNegative: string,
+  value: Fraction,
+  suffix = '',
+) {
   const abs = value.abs();
   return value.isNegative()
     ? `${verbNegative} ${abs.toString()}${suffix}`
@@ -61,12 +67,15 @@ export function solveStepByStep(input: string): StepSolution {
   }
   if (!clean.includes('=')) return simplify(clean);
   const [leftSrc, rightSrc, extra] = clean.split('=');
-  if (extra !== undefined) throw new Error('La ecuación tiene más de un signo "="');
+  if (extra !== undefined)
+    throw new Error('La ecuación tiene más de un signo "="');
   const left = parseExpression(leftSrc);
   const right = parseExpression(rightSrc);
   const vars = [...new Set([...variables(left), ...variables(right)])];
   if (vars.length > 1) {
-    throw new Error('Para dos incógnitas escribe un sistema: "2x + y = 7; x - y = 2"');
+    throw new Error(
+      'Para dos incógnitas escribe un sistema: "2x + y = 7; x - y = 2"',
+    );
   }
   const x = vars[0] ?? 'x';
   const all = sub(left, right);
@@ -89,7 +98,8 @@ function simplify(src: string): StepSolution {
       },
       {
         title: 'Paso 2',
-        explanation: 'Reducir términos semejantes (sumar los coeficientes de cada término).',
+        explanation:
+          'Reducir términos semejantes (sumar los coeficientes de cada término).',
         latex,
       },
     ],
@@ -113,8 +123,14 @@ function solveLinear(
 
   const originalLatex = `${leftSrc.trim()} = ${rightSrc.trim()}`;
   const simplifiedLatex = eq(left, right);
-  if (simplifiedLatex.replace(/\s/g, '') !== originalLatex.replace(/\s|\*/g, '')) {
-    push('Simplificar cada lado: eliminar paréntesis y reducir términos semejantes.', left, right);
+  if (
+    simplifiedLatex.replace(/\s/g, '') !== originalLatex.replace(/\s|\*/g, '')
+  ) {
+    push(
+      'Simplificar cada lado: eliminar paréntesis y reducir términos semejantes.',
+      left,
+      right,
+    );
   }
 
   let l = left;
@@ -161,7 +177,9 @@ function solveLinear(
   const solution = rhs.div(a);
   if (!a.isOne()) {
     push(
-      a.isInteger() ? `Dividir entre ${a.toString()} en ambos lados.` : `Multiplicar por ${new Fraction(a.den, a.num).toString()} en ambos lados.`,
+      a.isInteger()
+        ? `Dividir entre ${a.toString()} en ambos lados.`
+        : `Multiplicar por ${new Fraction(a.den, a.num).toString()} en ambos lados.`,
       new Map([[x, Fraction.ONE]]),
       constant(solution),
     );
@@ -185,14 +203,24 @@ function solveLinear(
   };
 }
 
-function solveQuadratic(input: string, left: Poly, right: Poly, x: string): StepSolution {
+function solveQuadratic(
+  input: string,
+  left: Poly,
+  right: Poly,
+  x: string,
+): StepSolution {
   const steps: SolutionStep[] = [];
   let n = 1;
   let all = sub(left, right);
-  if (!constValue(right).isZero() || coef(right, x).isZero() === false || coef(right, `${x}^2`).isZero() === false) {
+  if (
+    !constValue(right).isZero() ||
+    coef(right, x).isZero() === false ||
+    coef(right, `${x}^2`).isZero() === false
+  ) {
     steps.push({
       title: `Paso ${n++}`,
-      explanation: 'Pasar todos los términos al lado izquierdo para igualar a cero.',
+      explanation:
+        'Pasar todos los términos al lado izquierdo para igualar a cero.',
       latex: `${toLatex(all)} = 0`,
     });
   }
@@ -202,7 +230,8 @@ function solveQuadratic(input: string, left: Poly, right: Poly, x: string): Step
     a = a.neg();
     steps.push({
       title: `Paso ${n++}`,
-      explanation: 'Multiplicar por −1 para que el coeficiente principal sea positivo.',
+      explanation:
+        'Multiplicar por −1 para que el coeficiente principal sea positivo.',
       latex: `${toLatex(all)} = 0`,
     });
   }
@@ -261,7 +290,9 @@ function solveQuadratic(input: string, left: Poly, right: Poly, x: string): Step
     }
     steps.push({
       title: `Paso ${n++}`,
-      explanation: disc.isZero() ? 'Δ = 0: hay una solución doble.' : 'Calcular las dos soluciones.',
+      explanation: disc.isZero()
+        ? 'Δ = 0: hay una solución doble.'
+        : 'Calcular las dos soluciones.',
       latex: answerLatex,
     });
     const check = evaluate(all, { [x]: x1 });
@@ -283,7 +314,14 @@ function solveQuadratic(input: string, left: Poly, right: Poly, x: string): Step
     });
   }
 
-  return { kind: 'quadratic', input, inputLatex: input, steps, answer, answerLatex };
+  return {
+    kind: 'quadratic',
+    input,
+    inputLatex: input,
+    steps,
+    answer,
+    answerLatex,
+  };
 }
 
 function solveSystem(input: string, e1: string, e2: string): StepSolution {
@@ -296,10 +334,15 @@ function solveSystem(input: string, e1: string, e2: string): StepSolution {
   const p1 = toStandard(e1);
   const p2 = toStandard(e2);
   const vars = [...new Set([...variables(p1), ...variables(p2)])];
-  if (vars.length !== 2) throw new Error('El sistema debe tener exactamente dos incógnitas');
+  if (vars.length !== 2)
+    throw new Error('El sistema debe tener exactamente dos incógnitas');
   const [x, y] = vars;
-  const a1 = coef(p1, x), b1 = coef(p1, y), c1 = constValue(p1).neg();
-  const a2 = coef(p2, x), b2 = coef(p2, y), c2 = constValue(p2).neg();
+  const a1 = coef(p1, x),
+    b1 = coef(p1, y),
+    c1 = constValue(p1).neg();
+  const a2 = coef(p2, x),
+    b2 = coef(p2, y),
+    c2 = constValue(p2).neg();
   const line = (a: Fraction, b: Fraction, c: Fraction) =>
     `${toLatex(add(new Map([[x, a]]), new Map([[y, b]])))} = ${c.toLatex()}`;
 
@@ -315,7 +358,8 @@ function solveSystem(input: string, e1: string, e2: string): StepSolution {
   if (det.isZero()) {
     steps.push({
       title: 'Paso 2',
-      explanation: 'Las rectas son paralelas o coincidentes: el sistema no tiene solución única.',
+      explanation:
+        'Las rectas son paralelas o coincidentes: el sistema no tiene solución única.',
       latex: '\\Delta = 0',
     });
     return {
@@ -329,7 +373,8 @@ function solveSystem(input: string, e1: string, e2: string): StepSolution {
   }
 
   // Método de reducción: eliminar y.
-  const m1 = b2, m2 = b1;
+  const m1 = b2,
+    m2 = b1;
   steps.push({
     title: 'Paso 2',
     explanation: `Método de reducción: multiplicar la 1.ª ecuación por ${m1.toString()} y la 2.ª por ${m2.toString()} para igualar los coeficientes de ${y}.`,

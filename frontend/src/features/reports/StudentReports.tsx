@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { FileDown, Printer } from 'lucide-react'
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts'
 import { reportApi } from '@services/educraft'
+import { getBlob } from '@services/api'
 import type { Bulletin, ParentReport } from '@services/types'
 import { Badge, Button, Modal, Spinner } from '@components/ui'
+import { useFeedback } from '@context/ToastContext'
 import { LogoMark } from '@components/brand/Logo'
 import { ATTENDANCE, BLOCK_SHORT, LEVELS, OBSERVATION_TYPES } from '@lib/labels'
-import { escapeHtml as e, exportWord, printDocument } from '@lib/exporters'
+import { downloadHtmlAsDoc, escapeHtml as e, exportWord, printDocument } from '@lib/exporters'
 import { formatDate, formatPercent, formatScore, slugify } from '@lib/format'
 
 const SUBJECTS = [
@@ -21,10 +23,34 @@ const SUBJECTS = [
   'Formación Integral, Humana y Religiosa',
 ]
 
-const cell = (v: number | null | undefined) => (v == null ? '' : formatScore(v))
+type SituationCode = 'A' | 'PENDIENTE' | 'R'
+
+const SITUATION_LABELS: Record<SituationCode, string> = {
+  A: 'Promovido',
+  PENDIENTE: 'Promovido Pendiente',
+  R: 'Repite el Grado',
+}
+
+interface OfficialBulletin extends Bulletin {
+  sectionId?: number
+  official?: {
+    centro: string | null
+    distrito: string | null
+    anioEscolar: string
+    numeroFormulario: string
+    nombresDirector: string | null
+    firma: string | null
+    situacion: { code: SituationCode; label: string }
+  }
+}
+
+const dash = (value: unknown) => e(value == null || value === '' ? '—' : value)
+const cell = (v: number | null | undefined) => (v == null ? '—' : formatScore(v))
 
 /** HTML del boletín con la estructura de la plantilla oficial. */
 export function bulletinHtml(b: Bulletin) {
+  const data = b as OfficialBulletin
+  const official = data.official
   const value = (period: number, block: number, recovery: boolean) => {
     const entry = b.entries.find((x) => x.period === period && x.block === block)
     return cell(recovery ? entry?.recovery : entry?.score)
@@ -33,42 +59,78 @@ export function bulletinHtml(b: Bulletin) {
     .flatMap((block) => [1, 2, 3, 4].flatMap((p) => [`<td class="center">${value(p, block, false)}</td>`, `<td class="center">${value(p, block, true)}</td>`]))
     .join('')
   const pcs = [1, 2, 3, 4].map((k) => `<td class="center"><b>${cell(b.summary.blockAverages[k])}</b></td>`).join('')
-  const empty = '<td></td>'.repeat(32 + 4 + 4)
+  const noData = '<td class="nodata" colspan="40">Sin datos registrados para esta asignatura</td>'
   const rows = SUBJECTS.map((s) =>
     s === 'Matemática'
-      ? `<tr><td><b>${s}</b></td>${mathCells}${pcs}<td class="center"><b>${cell(b.summary.finalScore)}</b></td><td class="center">${cell(b.final?.completiveScore)}</td><td class="center">${cell(b.final?.extraordinaryScore)}</td><td class="center">${cell(b.final?.specialScore)}</td></tr>`
-      : `<tr><td>${s}</td>${empty}</tr>`,
+      ? `<tr><td class="subject" colspan="2"><b>${e(s)}</b></td>${mathCells}${pcs}<td class="center"><b>${cell(b.summary.finalScore)}</b></td><td class="center">${cell(b.final?.completiveScore)}</td><td class="center">${cell(b.final?.extraordinaryScore)}</td><td class="center">${cell(b.final?.specialScore)}</td></tr>`
+      : `<tr><td class="subject" colspan="2">${e(s)}</td>${noData}</tr>`,
   ).join('')
   const competenceHeader = b.blocks.map((bl) => `<th colspan="8" class="center">${e(bl.name)}</th>`).join('')
   const periodHeader = [1, 2, 3, 4].map(() => [1, 2, 3, 4].map((p) => `<th>P${p}</th><th>RP${p}</th>`).join('')).join('')
   const situation = b.summary.situation
+  const labelFor = (code: SituationCode) =>
+    official?.situacion?.code === code ? official.situacion.label : SITUATION_LABELS[code]
+  const situations = (['A', 'PENDIENTE', 'R'] as SituationCode[])
+    .map((code) => `<span>${situation === code ? '☑' : '☐'} ${e(labelFor(code))} <small>(${code})</small></span>`)
+    .join('')
   return `
+    <style>
+      .bulletin-official { font-size: 8pt; }
+      .bulletin-official th, .bulletin-official td { border-color: #475569; }
+      .bulletin-official .subject { width: 12%; }
+      .bulletin-official .nodata { color: #64748b; font-style: italic; text-align: center; }
+      .bulletin-official .situation span { white-space: nowrap; margin-right: 12px; }
+      .bulletin-official img { height: 36px; }
+      @media print { .bulletin-official, .bulletin-official tr { break-inside: avoid; } .bulletin-official thead { display: table-header-group; } }
+    </style>
+    <div class="bulletin-official">
     <table>
-      <tr><td colspan="45" class="head">Boletín de notas — Nivel ${e(b.level)}</td></tr>
-      <tr><td colspan="45">Grado: <b>${e(b.grade)}</b> &nbsp; Ciclo: <b>${e(b.cycle)}</b> &nbsp; Nivel: <b>${e(b.level)}</b> &nbsp; Sección: <b>${e(b.section)}</b> &nbsp; Año escolar: <b>${e(b.schoolYear)}</b></td></tr>
-      <tr><td colspan="45">Nombres y Apellidos: <b>${e(b.student.firstName)} ${e(b.student.lastName)}</b> &nbsp; Número: <b>${e(b.student.listNumber ?? '')}</b> &nbsp; Docente: <b>${e(b.teacher.name)}</b>${
-        b.teacher.institution ? ` &nbsp; Centro: <b>${e(b.teacher.institution)}</b>` : ''
-      }</td></tr>
-      <tr><th rowspan="2">Asignatura Académica</th>${competenceHeader}<th colspan="4" class="center">Promedio</th><th rowspan="2">Calificación final</th><th rowspan="2">Calificación completiva</th><th rowspan="2">Calificación extraordinaria</th><th rowspan="2">Calificación especial</th></tr>
+      <tr><td colspan="42" class="head">Boletín de notas — Nivel ${e(b.level)}</td></tr>
+      <tr><td colspan="42"><b>Centro:</b> ${dash(official?.centro ?? b.teacher.institution)} &nbsp; <b>Distrito:</b> ${dash(official?.distrito)} &nbsp; <b>N.º de formulario (control):</b> ${dash(official?.numeroFormulario)} &nbsp; <b>Año escolar:</b> ${dash(b.schoolYear)}</td></tr>
+      <tr><td colspan="42">Grado: <b>${e(b.grade)}</b> &nbsp; Ciclo: <b>${e(b.cycle)}</b> &nbsp; Nivel: <b>${e(b.level)}</b> &nbsp; Sección: <b>${e(b.section)}</b></td></tr>
+      <tr><td colspan="42">Nombres y Apellidos: <b>${e(b.student.firstName)} ${e(b.student.lastName)}</b> &nbsp; Número: <b>${dash(b.student.listNumber)}</b> &nbsp; Docente: <b>${e(b.teacher.name)}</b></td></tr>
+      <tr><th class="subject" rowspan="2" colspan="2">Asignatura Académica</th>${competenceHeader}<th colspan="4" class="center">Promedio</th><th rowspan="2">Calificación final</th><th rowspan="2">Calificación completiva</th><th rowspan="2">Calificación extraordinaria</th><th rowspan="2">Calificación especial</th></tr>
       <tr>${periodHeader}<th>PC1</th><th>PC2</th><th>PC3</th><th>PC4</th></tr>
       ${rows}
     </table>
-    <p class="muted">PC1: Competencia comunicativa · PC2: Pensamiento lógico, creativo y resolución de problemas · PC3: Ética y ciudadanía - desarrollo personal · PC4: Científica y tecnológica - ambiental y de la salud. Nota mínima: ${b.passing}.</p>
-    <p>${situation === 'A' ? '☑' : '☐'} Promovido &nbsp;&nbsp; ${situation === 'PENDIENTE' ? '☑' : '☐'} Promovido pendiente &nbsp;&nbsp; ${situation === 'R' ? '☑' : '☐'} Repite el grado</p>
+    <p class="muted">PC1: Competencia comunicativa · PC2: Pensamiento lógico, creativo y resolución de problemas · PC3: Ética y ciudadanía - desarrollo personal · PC4: Científica y tecnológica - ambiental y de la salud. «—» = sin nota registrada. Nota mínima: ${e(b.passing)}. Situación: ${e(labelFor(situation))} (${e(situation)}).</p>
+    <p class="situation">${situations}</p>
     <div class="sig">
-      <div>${b.teacher.signature ? `<img src="${b.teacher.signature}" style="height:48px"/><br/>` : ''}${e(b.teacher.name)}<br/>Docente</div>
-      <div>Director(a) del Centro Educativo</div>
+      <div>${b.teacher.signature ? `<img src="${e(b.teacher.signature)}" alt="Firma del docente" /><br/>` : ''}${e(b.teacher.name)}<br/>Docente</div>
+      <div>${dash(official?.nombresDirector)}<br/>Director(a) del Centro Educativo</div>
     </div>
-    <p class="muted">Fuente: plantilla de registro MINERD. Generado con Educraft XYZ.</p>
+    <p class="muted">Fuente: Plantilla de boletín y récord de notas (MINERD). Generado con Educraft XYZ.</p>
+    </div>
   `
 }
 
 export function BulletinModal({ studentId, onClose }: { studentId: number | null; onClose: () => void }) {
-  const [data, setData] = useState<Bulletin | null>(null)
+  const [data, setData] = useState<OfficialBulletin | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const { success, error } = useFeedback()
   useEffect(() => {
     setData(null)
-    if (studentId) reportApi.bulletin(studentId).then(setData).catch(() => setData(null))
+    if (studentId) {
+      reportApi
+        .bulletin(studentId)
+        .then((result) => setData(result as OfficialBulletin))
+        .catch(() => setData(null))
+    }
   }, [studentId])
+
+  const download = async (path: string, fileName: string) => {
+    setExporting(true)
+    try {
+      const blob = await getBlob(path)
+      downloadHtmlAsDoc(blob, fileName)
+      success('Boletín descargado', 'El archivo HTML está listo para imprimir o guardar como PDF.')
+    } catch (err) {
+      error('No se pudo descargar el boletín', (err as Error).message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const name = data ? `boletin-${slugify(`${data.student.lastName} ${data.student.firstName}`)}` : 'boletin'
   return (
     <Modal
@@ -80,6 +142,12 @@ export function BulletinModal({ studentId, onClose }: { studentId: number | null
       footer={
         data && (
           <>
+            <Button size="sm" variant="ghost" icon={<FileDown className="h-4 w-4" />} loading={exporting} onClick={() => download(`/reports/students/${data.student.id}/bulletin/export`, name)}>
+              HTML
+            </Button>
+            <Button size="sm" variant="soft" icon={<FileDown className="h-4 w-4" />} loading={exporting} disabled={!data.sectionId} onClick={() => data.sectionId && download(`/reports/sections/${data.sectionId}/bulletins/export`, `boletines-seccion-${data.sectionId}`)}>
+              Boletines de la sección
+            </Button>
             <Button variant="secondary" icon={<FileDown className="h-4 w-4" />} onClick={() => exportWord('Boletín', bulletinHtml(data), name)}>
               Word
             </Button>

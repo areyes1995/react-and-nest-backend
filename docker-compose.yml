@@ -1,5 +1,6 @@
 # Educraft XYZ — docker-compose raíz (dev)
-# Orquesta backend (NestJS) + frontend (Vite) + Postgres (pgvector) + Redis
+# Un único contenedor de app ejecuta backend (NestJS) + frontend (Vite).
+# Postgres (pgvector) y Redis se mantienen como servicios de infraestructura.
 #
 # Uso:
 #   docker compose up --build           # levanta todo (dev con hot-reload)
@@ -40,17 +41,18 @@ services:
     volumes:
       - redis_dev_data:/data
 
-  api:
+  app:
     image: node:22-slim
-    container_name: educraft_api_dev
+    container_name: educraft_app_dev
     working_dir: /app
     volumes:
-      - ./backend:/app
-      - api_node_modules:/app/node_modules
-      # evita sobreescribir el prisma client generado dentro del contenedor
-      - /app/dist
+      - .:/app
+      - app_node_modules:/app/node_modules
+      - app_backend_node_modules:/app/backend/node_modules
+      - app_frontend_node_modules:/app/frontend/node_modules
     ports:
       - '4000:3000'
+      - '5173:5173'
     env_file:
       - ./backend/.env
     environment:
@@ -64,6 +66,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: '6379'
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_password}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api/v1}
+      VITE_APP_NAME: ${VITE_APP_NAME:-Educraft XYZ}
+      VITE_AUTH_METHOD: ${VITE_AUTH_METHOD:-db}
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,33 +76,9 @@ services:
         condition: service_started
     entrypoint: ['sh', '/app/docker-entrypoint.dev.sh']
 
-  frontend:
-    image: node:22-slim
-    container_name: educraft_frontend_dev
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    ports:
-      - '5173:5173'
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api/v1}
-      VITE_APP_NAME: ${VITE_APP_NAME:-Educraft XYZ}
-      VITE_AUTH_METHOD: ${VITE_AUTH_METHOD:-db}
-    env_file:
-      - ./frontend/.env
-    depends_on:
-      - api
-    command: >
-      sh -c "
-        corepack enable &&
-        corepack prepare pnpm@10.2.0 --activate &&
-        pnpm install --frozen-lockfile &&
-        pnpm run dev -- --host 0.0.0.0 --port 5173
-      "
-
 volumes:
   pg_dev_data:
   redis_dev_data:
-  api_node_modules:
-  frontend_node_modules:
+  app_node_modules:
+  app_backend_node_modules:
+  app_frontend_node_modules:

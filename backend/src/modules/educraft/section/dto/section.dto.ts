@@ -137,7 +137,10 @@ export class CreateStudentDto {
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ required: false, description: 'Adecuaciones o situaciones particulares' })
+  @ApiProperty({
+    required: false,
+    description: 'Adecuaciones o situaciones particulares',
+  })
   notes?: string;
 }
 
@@ -149,7 +152,10 @@ export class UpdateStudentDto extends PartialType(CreateStudentDto) {
 
   @IsOptional()
   @IsInt()
-  @ApiProperty({ required: false, description: 'Mover a otra sección del docente' })
+  @ApiProperty({
+    required: false,
+    description: 'Mover a otra sección del docente',
+  })
   sectionId?: number;
 }
 
@@ -183,6 +189,8 @@ export class CreateObservationDto {
   aiGenerated?: boolean;
 }
 
+export class UpdateObservationDto extends PartialType(CreateObservationDto) {}
+
 export class CreateEvidenceDto {
   @IsString()
   @MaxLength(150)
@@ -196,7 +204,10 @@ export class CreateEvidenceDto {
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ required: false, description: 'Enlace externo (si no se sube archivo)' })
+  @ApiProperty({
+    required: false,
+    description: 'Enlace externo (si no se sube archivo)',
+  })
   url?: string;
 
   @IsOptional()

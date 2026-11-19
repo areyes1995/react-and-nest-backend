@@ -15,7 +15,10 @@ import { CurrentUser } from 'src/modules/auth/decorators/current-user.decorator'
 import type { DocumentTextExtractorService } from 'src/modules/document/services/interfaces/document-text-extractor.service';
 import { AuthenticatedUser } from '../shared/authenticated-user';
 import { EducraftController } from '../shared/educraft-controller.decorator';
-import { MAX_UPLOAD_BYTES, type UploadedFileLike } from '../shared/uploaded-file';
+import {
+  MAX_UPLOAD_BYTES,
+  type UploadedFileLike,
+} from '../shared/uploaded-file';
 import {
   DocumentToSessionDto,
   GenerateActivityDto,
@@ -42,20 +45,31 @@ export class AiPedagogyController {
   ) {}
 
   @Get('status')
-  @ApiResponse({ status: 200, description: 'Indica si hay proveedor de IA configurado.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Indica si hay proveedor de IA configurado.',
+  })
   status() {
     return this.ai.status();
   }
 
   @Post('lesson-plan')
-  @ApiResponse({ status: 201, description: 'Generador de sesiones (plantilla oficial de plan de clase).' })
-  lessonPlan(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateLessonPlanDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Generador de sesiones (plantilla oficial de plan de clase).',
+  })
+  lessonPlan(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateLessonPlanDto,
+  ) {
     return this.ai.lessonPlan(user.id, dto);
   }
 
   @Post('document-to-session')
   @ApiConsumes('multipart/form-data', 'application/json')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
   async documentToSession(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DocumentToSessionDto,
@@ -67,7 +81,8 @@ export class AiPedagogyController {
         text = file.buffer.toString('utf8');
       } else {
         try {
-          text = (await this.extractor.extractText(file.buffer, file.mimetype)).text;
+          text = (await this.extractor.extractText(file.buffer, file.mimetype))
+            .text;
         } catch {
           throw new BadRequestException(
             'No se pudo leer el archivo en el servidor. Envía el texto del documento o configura Azure Document Intelligence.',
@@ -79,29 +94,50 @@ export class AiPedagogyController {
   }
 
   @Post('problems')
-  @ApiResponse({ status: 201, description: 'Problemas contextualizados con solución y variantes.' })
-  problems(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateProblemsDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Problemas contextualizados con solución y variantes.',
+  })
+  problems(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateProblemsDto,
+  ) {
     return this.ai.problems(user.id, dto);
   }
 
   @Post('step-by-step')
-  @ApiResponse({ status: 201, description: 'Ejemplo resuelto paso a paso para proyectar.' })
-  stepByStep(@CurrentUser() user: AuthenticatedUser, @Body() dto: StepByStepDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Ejemplo resuelto paso a paso para proyectar.',
+  })
+  stepByStep(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: StepByStepDto,
+  ) {
     return this.ai.stepByStep(user.id, dto.expression);
   }
 
   @Post('rubric')
-  rubric(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateInstrumentDto) {
+  rubric(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateInstrumentDto,
+  ) {
     return this.ai.rubric(user.id, dto);
   }
 
   @Post('checklist')
-  checklist(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateInstrumentDto) {
+  checklist(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateInstrumentDto,
+  ) {
     return this.ai.checklist(user.id, dto);
   }
 
   @Post('rating-scale')
-  ratingScale(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateInstrumentDto) {
+  ratingScale(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateInstrumentDto,
+  ) {
     return this.ai.ratingScale(user.id, dto);
   }
 
@@ -111,29 +147,50 @@ export class AiPedagogyController {
   }
 
   @Post('activity')
-  activity(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateActivityDto) {
+  activity(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateActivityDto,
+  ) {
     return this.ai.activity(user.id, dto);
   }
 
   @Post('observation')
-  observation(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateObservationDto) {
+  observation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateObservationDto,
+  ) {
     return this.ai.observation(user.id, dto);
   }
 
   @Post('strategies')
-  @ApiResponse({ status: 201, description: 'Estrategias de refuerzo basadas en el historial del grupo.' })
-  strategies(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateStrategiesDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Estrategias de refuerzo basadas en el historial del grupo.',
+  })
+  strategies(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateStrategiesDto,
+  ) {
     return this.ai.strategies(user.id, dto);
   }
 
   @Post('presentation')
-  presentation(@CurrentUser() user: AuthenticatedUser, @Body() dto: GeneratePresentationDto) {
+  presentation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GeneratePresentationDto,
+  ) {
     return this.ai.presentation(user.id, dto.lessonPlanId);
   }
 
   @Post('program')
-  @ApiResponse({ status: 201, description: 'Borrador de programación anual por unidades.' })
-  program(@CurrentUser() user: AuthenticatedUser, @Body() dto: GenerateProgramDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Borrador de programación anual por unidades.',
+  })
+  program(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateProgramDto,
+  ) {
     return this.ai.program(user.id, dto);
   }
 

@@ -1,12 +1,11 @@
 import { IsInt, IsString, IsOptional } from 'class-validator';
 
 export class CreateAuthLogDto {
-
   @IsInt()
   userId!: number;
 
   @IsString()
-  action!: string; 
+  action!: string;
   // LOGIN | LOGOUT | LOGIN_FAILED
 
   @IsOptional()
@@ -16,5 +15,4 @@ export class CreateAuthLogDto {
   @IsOptional()
   @IsString()
   userAgent?: string;
-
 }

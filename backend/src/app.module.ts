@@ -14,6 +14,7 @@ import { MailerModule } from './modules/mailer/mailer.module';
 import { RagModule } from './modules/rag/rag.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { EducraftModule } from './modules/educraft/educraft.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
 
 import { PrismaModule } from 'prisma/prisma.module';
 import { HealthController } from './health.controller';
@@ -72,6 +73,7 @@ const bullConfig = {
     RagModule,
     RbacModule,
     EducraftModule,
+    MessagingModule,
   ],
   providers: [LoggerService],
   exports: [LoggerService],

@@ -40,6 +40,24 @@ export class CurriculumLinksDto {
   @IsInt({ each: true })
   @ApiProperty({ required: false, type: [Number] })
   contentIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  axisIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  capacityIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @ApiProperty({ required: false, type: [Number] })
+  performanceIds?: number[];
 }
 
 export class CreateUnitDto extends CurriculumLinksDto {
@@ -256,7 +274,9 @@ export class CreatePresentationDto {
   @IsArray()
   @ArrayMaxSize(80)
   @IsObject({ each: true })
-  @ApiProperty({ description: 'Diapositivas: [{ id, layout, title, blocks: [...] }]' })
+  @ApiProperty({
+    description: 'Diapositivas: [{ id, layout, title, blocks: [...] }]',
+  })
   slides!: Record<string, unknown>[];
 
   @IsOptional()
@@ -294,7 +314,9 @@ export class CreateActivityDto {
   instructions?: string;
 
   @IsObject()
-  @ApiProperty({ description: 'Contenido según el tipo (preguntas, pares, pasos, casillas…)' })
+  @ApiProperty({
+    description: 'Contenido según el tipo (preguntas, pares, pasos, casillas…)',
+  })
   content!: Record<string, unknown>;
 
   @IsOptional()
